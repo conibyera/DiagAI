@@ -98,7 +98,7 @@ if "Others" in selected_symptoms:
     if other_symptoms:
         if st.button("📧 Submit"):
             subject = "Additional Symptoms Submitted via App"
-            body = f"The user has submitted the following additional symptoms:\n\n{other_symptoms}"
+            body = f"The user has submitted the following additional symptoms:\n{other_symptoms}"
             receiver_email = "diagai2024@gmail.com"  # Replace with your email address
 
             # Send the email
