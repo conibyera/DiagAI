@@ -3,10 +3,12 @@ import numpy as np
 import tensorflow as tf
 import wikipediaapi
 import re
-
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Load the saved model
-model = tf.keras.models.load_model('malar_model.keras')
+model = tf.keras.models.load_model('G:/My Drive/Rapid-AI/malar_model.keras')
 
 # Define the list of symptoms (features)
 symptoms = ["Fever", "Vomiting", "Convulsions", "Cough","Yellow Eyes", "Diarrhoea", "Headache", "Body Pain","Abdnominal Pain","Loss of Appetite","Body Weakness"]
@@ -52,16 +54,67 @@ st.sidebar.write("""
     *Please remember that this application is a rapid diagnostic tool and not a substitute for professional medical advice.*
 """)
 
+# Fetch email and password from Streamlit secrets
+sender_email = st.secrets["email"]["sender_email"]
+sender_password = st.secrets["email"]["sender_password"]
 
+# Function to send email
+def send_email(recipient, subject, body):
+    try:
+        # Set up the SMTP server
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        server.login(sender_email, sender_password)
+
+        # Create the email
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = recipient
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Send the email
+        server.sendmail(sender_email, recipient, msg.as_string())
+        server.quit()
+
+        return True
+    except Exception as e:
+        st.error(f"Error sending email: {e}")
+        return False
 
 # Input section: Multiselect dropdown for symptoms
 selected_symptoms = st.multiselect(
     "Select the symptoms and signs you have:",
-    symptoms
+    symptoms + ["Others"]
 )
 
+# Handle "Others" logic
+if "Others" in selected_symptoms:
+    other_symptoms = st.text_area(
+        "Please list any other symptoms you are experiencing:",
+        placeholder="Type additional symptoms here..."
+    )
+
+    # Activate the "Send Email" button only if text is entered
+    if other_symptoms:
+        if st.button("📧 Submit"):
+            subject = "Additional Symptoms Submitted via App"
+            body = f"The user has submitted the following additional symptoms:\n\n{other_symptoms}"
+            receiver_email = "diagai2024@gmail.com"  # Replace with your email address
+
+            # Send the email
+            if send_email(subject, body, receiver_email):
+                st.success("Your symptoms have been sent successfully! Thank you.")
+            else:
+                st.error("There was an issue sending your symptoms. Please try again.")
+    else:
+        st.warning("Please describe additional symptoms before sending.")
+
+# Exclude "Others" from the prediction feature vector
+features_for_prediction = [symptom for symptom in selected_symptoms if symptom != "Others"]
+
 # Convert selected symptoms into binary feature vector
-input_features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms]
+input_features = [1 if symptom in features_for_prediction else 0 for symptom in symptoms]
+
 
 # Display the feature vector (for transparency)
 # st.write("Feature vector:", input_features)
