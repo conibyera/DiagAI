@@ -122,7 +122,7 @@ if st.button("🐜Malaria Results"):
      input_array = np.array(input_features).reshape(1, -1)
      prediction = model.predict(input_array)[0][0]
 
-     if prediction > 0.33:
+     if prediction > 0.34:
          st.success("Probably positive for malaria")
          summary = get_wikipedia_summary("malaria")
          st.write(f"**Malaria Summary:** {summary}")
