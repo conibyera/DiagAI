@@ -59,26 +59,23 @@ sender_email = st.secrets["email"]["sender_email"]
 sender_password = st.secrets["email"]["sender_password"]
 
 # Function to send email
-def send_email(recipient, subject, body):
+def send_email(subject, body, receiver_email):
+    sender_email = st.secrets["email"]["sender_email"]
+    sender_password = st.secrets["email"]["sender_password"]
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
     try:
-        # Set up the SMTP server
-        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
-        server.login(sender_email, sender_password)
-
-        # Create the email
-        msg = MIMEMultipart()
-        msg['From'] = sender_email
-        msg['To'] = recipient
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-
-        # Send the email
-        server.sendmail(sender_email, recipient, msg.as_string())
-        server.quit()
-
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, receiver_email, msg.as_string())
         return True
     except Exception as e:
-        st.error(f"Error sending email: {e}")
+        st.error(f"Error sending email: {str(e)}")
         return False
 
 # Input section: Multiselect dropdown for symptoms
@@ -97,17 +94,18 @@ if "Others" in selected_symptoms:
     # Activate the "Send Email" button only if text is entered
     if other_symptoms:
         if st.button("📧 Submit"):
-            subject = "Additional Symptoms Submitted via App"
-            body = f"The user has submitted the following additional symptoms:{other_symptoms}"
+            subject = f"The user has submitted additional symptoms: {other_symptoms.replace('\n', ' ')}"  # Ensure no newlines in subject
+            body = f"The user has provided the following additional symptoms:\n\n{other_symptoms}"
             receiver_email = "diagai2024@gmail.com"  # Replace with your email address
 
-            # Send the email
+            # Send the email using the modified function
             if send_email(subject, body, receiver_email):
                 st.success("Your symptoms have been sent successfully! Thank you.")
             else:
                 st.error("There was an issue sending your symptoms. Please try again.")
     else:
         st.warning("Please describe additional symptoms before sending.")
+
 
 # Exclude "Others" from the prediction feature vector
 features_for_prediction = [symptom for symptom in selected_symptoms if symptom != "Others"]
