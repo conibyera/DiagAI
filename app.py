@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # Load the saved model
-model = tf.keras.models.load_model('G:/My Drive/Rapid-AI/malar_model.keras')
+model = tf.keras.models.load_model('malar_model.keras')
 
 # Define the list of symptoms (features)
 symptoms = ["Fever", "Vomiting", "Convulsions", "Cough","Yellow Eyes", "Diarrhoea", "Headache", "Body Pain","Abdnominal Pain","Loss of Appetite","Body Weakness"]
