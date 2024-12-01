@@ -93,7 +93,7 @@ if "Others" in selected_symptoms:
 
     # Activate the "Send Email" button only if text is entered
     if other_symptoms:
-        if st.button("📧 Submit"):
+        if st.button("📧 Submit Symptoms"):
             subject = f"The user has submitted additional symptoms: {other_symptoms.replace('\n', ' ')}"  # Ensure no newlines in subject
             body = f"The user has provided the following additional symptoms:\n\n{other_symptoms}"
             receiver_email = "diagai2024@gmail.com"  # Replace with your email address
