@@ -62,7 +62,8 @@ translations = {
     "button_results": {"en": "🐜Malaria Results", "sw": "🐜Matokeo ya Malaria"},
     "positive_result": {"en": "Probably positive for malaria", "sw": "Inawezekana una malaria"},
     "negative_result": {"en": "Probably negative for malaria", "sw": "Inawezekana huna malaria"},
-    "submit_other": {"en": "Submit Symptoms", "sw": "Tuma Dalili"}
+    "send_email_button": {"en": "📧 Submit Symptoms", "sw": "📧 Tuma Dalili"},
+    "send_email_warning": {"en": "Please describe additional symptoms before sending.", "sw": "Tafadhali eleza dalili zaidi kabla ya kutuma."}
 }
 
 # Function to fetch Wikipedia summary
@@ -105,11 +106,22 @@ with tab_en:
     st.sidebar.write(translations["sidebar_content"]["en"])
 
     selected_symptoms = st.multiselect(translations["symptoms_prompt"]["en"], symptoms_en + ["Others"])
+    
+    if "Others" in selected_symptoms:
+        other_symptoms = st.text_area("Please list any other symptoms or signs you have:")
+        if st.button(translations["send_email_button"]["en"]):
+            if other_symptoms:
+                subject = "Additional Symptoms Submitted via App"
+                body = f"The user has submitted additional symptoms:\n\n{other_symptoms}"
+                receiver_email = "diagai2024@gmail.com"
+                if send_email(subject, body, receiver_email):
+                    st.success("Your symptoms have been sent successfully! Thank you.")
+            else:
+                st.warning(translations["send_email_warning"]["en"])
 
     if st.button(translations["button_results"]["en"]):
-        features_for_prediction = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
-        input_array = np.array(features_for_prediction).reshape(1, -1)
-        prediction = model.predict(input_array)[0][0]
+        features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
+        prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
         if prediction > 0.24:
             st.success(translations["positive_result"]["en"])
             st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
@@ -119,18 +131,25 @@ with tab_en:
 # Swahili Tab
 with tab_sw:
     st.title(translations["title"]["sw"])
-    st.sidebar.header(translations["sidebar_header"]["sw"])
-    st.sidebar.write(translations["sidebar_content"]["sw"])
-
     selected_symptoms_sw = st.multiselect(translations["symptoms_prompt"]["sw"], symptoms_sw + ["Nyingine"])
 
-    # Map Swahili symptoms to English for prediction
+    if "Nyingine" in selected_symptoms_sw:
+        other_symptoms = st.text_area("Andika dalili zingine unazopata:")
+        if st.button(translations["send_email_button"]["sw"]):
+            if other_symptoms:
+                subject = "Dalili za Ziada Zimetumwa Kupitia Programu"
+                body = f"Mtumiaji ametuma dalili zifuatazo:\n\n{other_symptoms}"
+                receiver_email = "diagai2024@gmail.com"
+                if send_email(subject, body, receiver_email):
+                    st.success("Dalili zako zimetumwa kikamilifu! Asante.")
+            else:
+                st.warning(translations["send_email_warning"]["sw"])
+
     selected_symptoms = [symptoms_en[symptoms_sw.index(symptom)] for symptom in selected_symptoms_sw if symptom != "Nyingine"]
 
     if st.button(translations["button_results"]["sw"]):
-        features_for_prediction = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
-        input_array = np.array(features_for_prediction).reshape(1, -1)
-        prediction = model.predict(input_array)[0][0]
+        features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
+        prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
         if prediction > 0.24:
             st.success(translations["positive_result"]["sw"])
             st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
