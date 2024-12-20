@@ -137,7 +137,7 @@ with tab_sw:
     selected_symptoms_sw = st.multiselect(translations["symptoms_prompt"]["sw"], symptoms_sw + ["Nyingine"])
 
     if "Nyingine" in selected_symptoms_sw:
-        other_symptoms = st.text_area("Andika dalili zingine unazopata
+        other_symptoms = st.text_area("Andika dalili zingine unazopata")
         if other_symptoms:
             if st.button(translations["send_email_button"]["sw"]):
                 if other_symptoms:
@@ -148,6 +148,8 @@ with tab_sw:
                         st.success("Dalili zako zimetumwa kikamilifu! Asante.")
                 else:
                     st.warning(translations["send_email_warning"]["sw"])
+         else:
+            st.warning("Tafadhali andika dalili nyingine kabala ya kutuma ujumbe.")
 
     selected_symptoms = [symptoms_en[symptoms_sw.index(symptom)] for symptom in selected_symptoms_sw if symptom != "Nyingine"]
 
