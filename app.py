@@ -134,7 +134,10 @@ with tab_en:
 # Swahili Tab
 with tab_sw:
     st.title(translations["title"]["sw"])
-    selected_symptoms_sw = st.multiselect(translations["symptoms_prompt"]["sw"], symptoms_sw + ["Nyingine"])
+    st.sidebar.header(translations["sidebar_header"]["sw"])
+    st.sidebar.write(translations["sidebar_content"]["sw"])
+    
+    selected_symptoms_sw = st.multiselect(translations["symptoms_prompt"]["sw"], symptoms_sw + ["Dalili Nyingine"])
 
     if "Nyingine" in selected_symptoms_sw:
         other_symptoms = st.text_area("Andika dalili zingine unazopata")
@@ -151,7 +154,7 @@ with tab_sw:
         else:
             st.warning("Tafadhali andika dalili nyingine kabala ya kutuma ujumbe.")
 
-    selected_symptoms = [symptoms_en[symptoms_sw.index(symptom)] for symptom in selected_symptoms_sw if symptom != "Nyingine"]
+    selected_symptoms = [symptoms_en[symptoms_sw.index(symptom)] for symptom in selected_symptoms_sw if symptom != "Dalili Nyingine"]
 
     if st.button(translations["button_results"]["sw"]):
         features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
