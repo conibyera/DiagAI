@@ -10,55 +10,70 @@ from email.mime.multipart import MIMEMultipart
 # Load the saved model
 model = tf.keras.models.load_model('malar_model.keras')
 
-# Define the list of symptoms (features)
-symptoms = ["Fever", "Vomiting", "Cough","Diarrhoea", "Headache", "Body Pain","Abdnominal Pain","Loss of Appetite",
-           "Body Weakness", "Blood in Urine", "Dizziness", "Epigastric Pain", "Eye Pain", "Fungal Infection", "Generalized Rash",
-           "Joint Pain", "Numbness", "Pain Urinating", "Palpitations", "Vaginal Discharge", "Runny Nose", "Scabies", "Took Malaria Medication"]
+# Define symptoms in English and Swahili
+symptoms_en = [
+    "Fever", "Vomiting", "Cough", "Diarrhoea", "Headache", "Body Pain",
+    "Abdominal Pain", "Loss of Appetite", "Body Weakness", "Blood in Urine",
+    "Dizziness", "Epigastric Pain", "Eye Pain", "Fungal Infection", "Generalized Rash",
+    "Joint Pain", "Numbness", "Pain Urinating", "Palpitations", "Vaginal Discharge",
+    "Runny Nose", "Scabies", "Took Malaria Medication"
+]
 
-# Function to fetch Wikipedia summary with improved sentence splitting
-def get_wikipedia_summary(disease, num_sentences=5):
-    # Define Wikipedia API with user-agent header
-    wiki_wiki = wikipediaapi.Wikipedia(
-        language='en', 
-        user_agent='DiagAI/1.0'
-    )
+symptoms_sw = [
+    "Homa", "Kutapika", "Kikohozi", "Kuhara", "Kichwa Kuuma", "Maumivu ya Mwili",
+    "Maumivu ya Tumbo", "Kupoteza Hamu ya Kula", "Udhaifu wa Mwili", "Damu Katika Mkojo",
+    "Kizunguzungu", "Maumivu ya Epigastriki", "Maumivu ya Macho", "Maambukizi ya Kuvu",
+    "Upele wa Mwili", "Maumivu ya Viungo", "Kufa Ganzi", "Maumivu Wakati wa Mkojo", 
+    "Mapigo ya Moyo Kasi", "Uchafu wa Uke", "Mafua", "Kaskasi", "Umetumia Dawa za Malaria"
+]
 
-    # Fetch the page related to the disease
+# UI Translations
+translations = {
+    "title": {"en": "DiagAI/1.0 for Rapid Malaria Diagnosis", "sw": "DiagAI/1.0 kwa Uchunguzi wa Haraka wa Malaria"},
+    "sidebar_header": {"en": "About This App", "sw": "Kuhusu Programu Hii"},
+    "sidebar_content": {
+        "en": """
+            DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient characteristics input.
+            
+            This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms, signs, or patient characteristics.
+            
+            **How to Use:**
+            1. Select the symptoms and signs you are experiencing or other characteristics from the dropdown menu.
+            2. Click on the buttons to check the disease status for malaria.
+            3. The app will indicate whether you are probably positive or negative for malaria.
+    
+            *Please remember that this application is a rapid diagnostic tool and not a substitute for professional medical advice.*
+        """,
+        "sw": """
+            DiagAI ni programu ya mtandao iliyoundwa kwa uchunguzi wa haraka wa magonjwa kulingana na dalili, ishara, na tabia za mgonjwa.
+            
+            Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa kuzingatia dalili na ishara zilizoainishwa na mgonjwa au mtabibu wake.
+            
+            **Maelekezo:**
+            1. Chagua the dalili au ishara au tabia nyingine za ugonjwa wako kutoka kwenye menyu.
+            2. Bonyeza kifungo ili kuangalia kama una uwezekano wa malaria.
+            3. Programu itakuonyesha kama una uwezekano wa kuwa na malaria au la.
+    
+            *Tafadhali kumbuka kuwa hii programu imeandaliwa kwa ajili ya uchunguzi wa haraka wa malaria, hivyo isitumike kama mbadala wa ushauri wa wataalamu wa afya.*
+
+        """
+    },
+    "symptoms_prompt": {"en": "Select the symptoms or signs you have:", "sw": "Chagua dalili au ishara zinazoshabihiana na tatizo lako:"},
+    "button_results": {"en": "🐜Malaria Results", "sw": "🐜Matokeo ya Malaria"},
+    "positive_result": {"en": "Probably positive for malaria", "sw": "Inawezekana una malaria"},
+    "negative_result": {"en": "Probably negative for malaria", "sw": "Inawezekana huna malaria"},
+    "submit_other": {"en": "Submit Symptoms", "sw": "Tuma Dalili"}
+}
+
+# Function to fetch Wikipedia summary
+def get_wikipedia_summary(disease, num_sentences=5, lang="en"):
+    wiki_wiki = wikipediaapi.Wikipedia(language=lang, user_agent='DiagAI/1.0')
     page = wiki_wiki.page(disease)
-
     if page.exists():
-        # Split summary into sentences
         sentences = re.split(r'(?<=[.!?])\s*', page.summary)
-        sentences = [sentence.strip() for sentence in sentences if sentence]  # Clean up
-
-        # Return the desired number of sentences
         return ' '.join(sentences[:num_sentences])
     else:
         return f"No information found for {disease}."
-
-
-# Streamlit app interface
-st.title("DiagAI/1.0 for Rapid Malaria Diagnosis")
-
-# Sidebar for app explanation
-st.sidebar.header("About This App")
-st.sidebar.write("""
-    DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient characteristics input.
-    
-    This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms, signs, or patient characteristics. 
-    You can select symptoms or signs you are experiencing or other characteristics, and the model will provide you with a probable diagnosis for malaria.
-        
-    **How to Use:**
-    1. Select the symptoms and signs you are experiencing or other characteristics from the dropdown menu.
-    2. Click on the buttons to check the disease status for malaria.
-    3. The app will indicate whether you are probably positive or negative for malaria.
-    
-    *Please remember that this application is a rapid diagnostic tool and not a substitute for professional medical advice.*
-""")
-
-# Fetch email and password from Streamlit secrets
-sender_email = st.secrets["email"]["sender_email"]
-sender_password = st.secrets["email"]["sender_password"]
 
 # Function to send email
 def send_email(subject, body, receiver_email):
@@ -80,55 +95,44 @@ def send_email(subject, body, receiver_email):
         st.error(f"Error sending email: {str(e)}")
         return False
 
-# Input section: Multiselect dropdown for symptoms
-selected_symptoms = st.multiselect(
-    "Select the characteristics, symptoms or signs you have:",
-    symptoms + ["Others"]
-)
+# App Layout with Tabs
+tab_en, tab_sw = st.tabs(["English", "Kiswahili"])
 
-# Handle "Others" logic
-if "Others" in selected_symptoms:
-    other_symptoms = st.text_area(
-        "Please list any other symptoms or signs you have:",
-        placeholder="Type additional signs or symptoms here..."
-    )
+# English Tab
+with tab_en:
+    st.title(translations["title"]["en"])
+    st.sidebar.header(translations["sidebar_header"]["en"])
+    st.sidebar.write(translations["sidebar_content"]["en"])
 
-    # Activate the "Send Email" button only if text is entered
-    if other_symptoms:
-        if st.button("📧 Submit Symptoms"):
-            # Replace newline characters before creating the f-string
-            other_symptoms_no_newlines = other_symptoms.replace('\n', ' ')
-            subject = f"The user has submitted additional symptoms: {other_symptoms_no_newlines}"  # Ensure no newlines in subject
-            body = f"The user has provided the following additional symptoms:\n\n{other_symptoms}"
-            receiver_email = "diagai2024@gmail.com"  # Replace with your email address
+    selected_symptoms = st.multiselect(translations["symptoms_prompt"]["en"], symptoms_en + ["Others"])
 
-            # Send the email using the modified function
-            if send_email(subject, body, receiver_email):
-                st.success("Your symptoms have been sent successfully! Thank you.")
-            else:
-                st.error("There was an issue sending your symptoms. Please try again.")
-    else:
-        st.warning("Please describe additional symptoms before sending.")
+    if st.button(translations["button_results"]["en"]):
+        features_for_prediction = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
+        input_array = np.array(features_for_prediction).reshape(1, -1)
+        prediction = model.predict(input_array)[0][0]
+        if prediction > 0.24:
+            st.success(translations["positive_result"]["en"])
+            st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
+        else:
+            st.info(translations["negative_result"]["en"])
 
+# Swahili Tab
+with tab_sw:
+    st.title(translations["title"]["sw"])
+    st.sidebar.header(translations["sidebar_header"]["sw"])
+    st.sidebar.write(translations["sidebar_content"]["sw"])
 
-# Exclude "Others" from the prediction feature vector
-features_for_prediction = [symptom for symptom in selected_symptoms if symptom != "Others"]
+    selected_symptoms_sw = st.multiselect(translations["symptoms_prompt"]["sw"], symptoms_sw + ["Nyingine"])
 
-# Convert selected symptoms into binary feature vector
-input_features = [1 if symptom in features_for_prediction else 0 for symptom in symptoms]
+    # Map Swahili symptoms to English for prediction
+    selected_symptoms = [symptoms_en[symptoms_sw.index(symptom)] for symptom in selected_symptoms_sw if symptom != "Nyingine"]
 
-
-# Display the feature vector (for transparency)
-# st.write("Feature vector:", input_features)
-
-if st.button("🐜Malaria Results"):
-     # Malaria Prediction Logic
-     input_array = np.array(input_features).reshape(1, -1)
-     prediction = model.predict(input_array)[0][0]
-
-     if prediction > 0.24:
-         st.success("Probably positive for malaria")
-         summary = get_wikipedia_summary("malaria")
-         st.write(f"**Malaria Summary:** {summary}")
-     else:
-         st.info("Probably negative for malaria")   
+    if st.button(translations["button_results"]["sw"]):
+        features_for_prediction = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
+        input_array = np.array(features_for_prediction).reshape(1, -1)
+        prediction = model.predict(input_array)[0][0]
+        if prediction > 0.24:
+            st.success(translations["positive_result"]["sw"])
+            st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
+        else:
+            st.info(translations["negative_result"]["sw"])
