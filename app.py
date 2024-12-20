@@ -11,7 +11,9 @@ from email.mime.multipart import MIMEMultipart
 model = tf.keras.models.load_model('malar_model.keras')
 
 # Define the list of symptoms (features)
-symptoms = ["Fever", "Vomiting", "Convulsions", "Cough","Yellow Eyes", "Diarrhoea", "Headache", "Body Pain","Abdnominal Pain","Loss of Appetite","Body Weakness"]
+symptoms = ["Fever", "Vomiting", "Cough","Diarrhoea", "Headache", "Body Pain","Abdnominal Pain","Loss of Appetite",
+           "Body Weakness", "Blood in Urine", "Dizziness", "Epigastric Pain", "Eye Pain", "Fungal Infection", "Generalized Rash",
+           "Joint Pain", "Numbness", "Pain Urinating", "Palpitations", "Vaginal Discharge", "Runny Nose", "Scabies", "Took Malaria Medication"]
 
 # Function to fetch Wikipedia summary with improved sentence splitting
 def get_wikipedia_summary(disease, num_sentences=5):
@@ -94,7 +96,9 @@ if "Others" in selected_symptoms:
     # Activate the "Send Email" button only if text is entered
     if other_symptoms:
         if st.button("📧 Submit Symptoms"):
-            subject = f"The user has submitted additional symptoms: {other_symptoms.replace('\n', ' ')}"  # Ensure no newlines in subject
+            # Replace newline characters before creating the f-string
+            other_symptoms_no_newlines = other_symptoms.replace('\n', ' ')
+            subject = f"The user has submitted additional symptoms: {other_symptoms_no_newlines}"  # Ensure no newlines in subject
             body = f"The user has provided the following additional symptoms:\n\n{other_symptoms}"
             receiver_email = "diagai2024@gmail.com"  # Replace with your email address
 
@@ -122,7 +126,7 @@ if st.button("🐜Malaria Results"):
      input_array = np.array(input_features).reshape(1, -1)
      prediction = model.predict(input_array)[0][0]
 
-     if prediction > 0.34:
+     if prediction > 0.24:
          st.success("Probably positive for malaria")
          summary = get_wikipedia_summary("malaria")
          st.write(f"**Malaria Summary:** {summary}")
