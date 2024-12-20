@@ -50,12 +50,11 @@ translations = {
             Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa kuzingatia dalili na ishara zilizoainishwa na mgonjwa au mtabibu wake.
             
             **Maelekezo:**
-            1. Chagua the dalili au ishara au tabia nyingine za ugonjwa wako kutoka kwenye menyu.
-            2. Bonyeza kifungo ili kuangalia kama una uwezekano wa malaria.
+            1. Chagua dalili, ishara au tabia zozote zinahusina na ugonjwa wako kutoka kwenye menyu.
+            2. Bonyeza kitufe ili kuangalia kama una uwezekano wa malaria.
             3. Programu itakuonyesha kama una uwezekano wa kuwa na malaria au la.
     
-            *Tafadhali kumbuka kuwa hii programu imeandaliwa kwa ajili ya uchunguzi wa haraka wa malaria, hivyo isitumike kama mbadala wa ushauri wa wataalamu wa afya.*
-
+            *Tafadhali kumbuka kuwa hii programu imeandaliwa kwa ajili ya uchunguzi wa haraka wa malaria na si mbadala wa ushauri wa kitaalamu wa matibabu.*
         """
     },
     "symptoms_prompt": {"en": "Select the symptoms or signs you have:", "sw": "Chagua dalili au ishara zinazoshabihiana na tatizo lako:"},
