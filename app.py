@@ -82,7 +82,7 @@ def send_email(subject, body, receiver_email):
 
 # Input section: Multiselect dropdown for symptoms
 selected_symptoms = st.multiselect(
-    "Select the chgaracteristics, symptoms or signs you have:",
+    "Select the characteristics, symptoms or signs you have:",
     symptoms + ["Others"]
 )
 
