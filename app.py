@@ -148,7 +148,7 @@ with tab_sw:
                         st.success("Dalili zako zimetumwa kikamilifu! Asante.")
                 else:
                     st.warning(translations["send_email_warning"]["sw"])
-         else:
+        else:
             st.warning("Tafadhali andika dalili nyingine kabala ya kutuma ujumbe.")
 
     selected_symptoms = [symptoms_en[symptoms_sw.index(symptom)] for symptom in selected_symptoms_sw if symptom != "Nyingine"]
