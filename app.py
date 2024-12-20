@@ -43,13 +43,13 @@ st.title("DiagAI/1.0 for Rapid Malaria Diagnosis")
 # Sidebar for app explanation
 st.sidebar.header("About This App")
 st.sidebar.write("""
-    DiagAI is a web application designed for rapid disease diagnosis based on symptoms and signs input.
+    DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient characteristics input.
     
-    This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms or signs. 
-    You can select symptoms or signs you are experiencing, and the model will provide you with a probable diagnosis for malaria.
+    This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms, signs, or patient characteristics. 
+    You can select symptoms or signs you are experiencing or other characteristics, and the model will provide you with a probable diagnosis for malaria.
         
     **How to Use:**
-    1. Select the symptoms and signs you are experiencing from the dropdown menu.
+    1. Select the symptoms and signs you are experiencing or other characteristics from the dropdown menu.
     2. Click on the buttons to check the disease status for malaria.
     3. The app will indicate whether you are probably positive or negative for malaria.
     
@@ -82,15 +82,15 @@ def send_email(subject, body, receiver_email):
 
 # Input section: Multiselect dropdown for symptoms
 selected_symptoms = st.multiselect(
-    "Select the symptoms and signs you have:",
+    "Select the chgaracteristics, symptoms or signs you have:",
     symptoms + ["Others"]
 )
 
 # Handle "Others" logic
 if "Others" in selected_symptoms:
     other_symptoms = st.text_area(
-        "Please list any other symptoms you are experiencing:",
-        placeholder="Type additional symptoms here..."
+        "Please list any other symptoms or signs you have:",
+        placeholder="Type additional signs or symptoms here..."
     )
 
     # Activate the "Send Email" button only if text is entered
