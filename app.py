@@ -16,7 +16,7 @@ symptoms_en = [
     "Abdominal Pain", "Loss of Appetite", "Body Weakness", "Blood in Urine",
     "Dizziness", "Epigastric Pain", "Eye Pain", "Fungal Infection", "Generalized Rash",
     "Joint Pain", "Numbness", "Pain Urinating", "Palpitations", "Vaginal Discharge",
-    "Runny Nose", "Scabies", "Took Malaria Medication"
+    "Runny Nose", "Scabies", "Treated for Malaria Recently"
 ]
 
 symptoms_sw = [
@@ -24,7 +24,7 @@ symptoms_sw = [
     "Maumivu ya Tumbo", "Kupoteza Hamu ya Kula", "Udhaifu wa Mwili", "Damu Katika Mkojo",
     "Kizunguzungu", "Maumivu ya Epigastriki", "Maumivu ya Macho", "Maambukizi ya Kuvu",
     "Upele wa Mwili", "Maumivu ya Viungo", "Kufa Ganzi", "Maumivu Wakati wa Mkojo", 
-    "Mapigo ya Moyo Kasi", "Uchafu wa Uke", "Mafua", "Kaskasi", "Umetumia Dawa za Malaria"
+    "Mapigo ya Moyo Kasi", "Uchafu wa Uke", "Mafua", "Kaskasi", "Umetibiwa Malaria Karibuni"
 ]
 
 # UI Translations
@@ -57,7 +57,8 @@ translations = {
             *Tafadhali kumbuka kuwa hii programu imeandaliwa kwa ajili ya uchunguzi wa haraka wa malaria na si mbadala wa ushauri wa kitaalamu wa matibabu.*
         """
     },
-    "symptoms_prompt": {"en": "Select the symptoms or signs you have:", "sw": "Chagua dalili au ishara zinazoshabihiana na tatizo lako:"},
+    "symptoms_prompt": {"en": "Select history, symptoms or signs you have:", "sw": "Chagua historia, dalili au ishara ulizonazo:"},
+    "symptoms_placeholder": {"en": "Choose options:", "sw": "Chagua zinazokuhusu:"},
     "button_results": {"en": "🐜Malaria Results", "sw": "🐜Matokeo ya Malaria"},
     "positive_result": {"en": "Probably positive for malaria", "sw": "Inawezekana una malaria"},
     "negative_result": {"en": "Probably negative for malaria", "sw": "Inawezekana huna malaria"},
@@ -104,7 +105,7 @@ with tab_en:
     st.sidebar.header(translations["sidebar_header"]["en"])
     st.sidebar.write(translations["sidebar_content"]["en"])
 
-    selected_symptoms = st.multiselect(translations["symptoms_prompt"]["en"], symptoms_en + ["Others"])
+    selected_symptoms = st.multiselect(translations["symptoms_prompt"]["en"], symptoms_en + ["Others"],translations["symptoms_placeholder"]["en"])
     
     if "Others" in selected_symptoms:
         other_symptoms = st.text_area("Please list any other symptoms or signs you have:")
@@ -136,7 +137,7 @@ with tab_sw:
     st.sidebar.header(translations["sidebar_header"]["sw"])
     st.sidebar.write(translations["sidebar_content"]["sw"])
     
-    selected_symptoms_sw = st.multiselect(translations["symptoms_prompt"]["sw"], symptoms_sw + ["Dalili Nyingine"])
+    selected_symptoms_sw = st.multiselect(translations["symptoms_prompt"]["sw"], symptoms_sw + ["Dalili Nyingine"],translations["symptoms_placeholder"]["sw"])
 
     if "Dalili Nyingine" in selected_symptoms_sw:
         other_symptoms = st.text_area("Andika dalili zingine unazopata")
