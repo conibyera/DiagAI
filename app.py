@@ -105,7 +105,7 @@ with tab_en:
     st.sidebar.header(translations["sidebar_header"]["en"])
     st.sidebar.write(translations["sidebar_content"]["en"])
 
-    selected_symptoms = st.multiselect(translations["symptoms_prompt"]["en"], symptoms_en + ["Others"],translations["symptoms_placeholder"]["en"])
+    selected_symptoms = st.multiselect(translations["symptoms_prompt"]["en"], symptoms_en + ["Others"],placeholder = translations["symptoms_placeholder"]["en"])
     
     if "Others" in selected_symptoms:
         other_symptoms = st.text_area("Please list any other symptoms or signs you have:")
@@ -137,7 +137,7 @@ with tab_sw:
     st.sidebar.header(translations["sidebar_header"]["sw"])
     st.sidebar.write(translations["sidebar_content"]["sw"])
     
-    selected_symptoms_sw = st.multiselect(translations["symptoms_prompt"]["sw"], symptoms_sw + ["Dalili Nyingine"],translations["symptoms_placeholder"]["sw"])
+    selected_symptoms_sw = st.multiselect(translations["symptoms_prompt"]["sw"], symptoms_sw + ["Dalili Nyingine"],placeholder = translations["symptoms_placeholder"]["sw"])
 
     if "Dalili Nyingine" in selected_symptoms_sw:
         other_symptoms = st.text_area("Andika dalili zingine unazopata")
