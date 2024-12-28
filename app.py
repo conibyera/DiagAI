@@ -33,24 +33,24 @@ translations = {
     "sidebar_header": {"en": "About This App", "sw": "Kuhusu Programu Hii"},
     "sidebar_content": {
         "en": """
-            DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient characteristics input.
+            DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient history input.
             
-            This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms, signs, or patient characteristics.
+            This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms, signs, or patient history.
             
             **How to Use:**
-            1. Select the symptoms and signs you are experiencing or other characteristics from the dropdown menu.
+            1. Select the symptoms and signs you are experiencing or history from the dropdown menu.
             2. Click on the buttons to check the disease status for malaria.
             3. The app will indicate whether you are probably positive or negative for malaria.
     
             *Please remember that this application is a rapid diagnostic tool and not a substitute for professional medical advice.*
         """,
         "sw": """
-            DiagAI ni programu ya mtandao iliyoundwa kwa uchunguzi wa haraka wa magonjwa kulingana na dalili, ishara, na tabia za mgonjwa.
+            DiagAI ni programu ya mtandao iliyoundwa kwa uchunguzi wa haraka wa magonjwa kulingana na dalili, ishara, na historia ya mgonjwa.
             
-            Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa kuzingatia dalili na ishara zilizoainishwa na mgonjwa au mtabibu wake.
+            Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa kuzingatia historia, dalili na ishara zilizoainishwa na mgonjwa au mtabibu wake.
             
             **Maelekezo:**
-            1. Chagua dalili, ishara au tabia zozote zinahusina na ugonjwa wako kutoka kwenye menyu.
+            1. Chagua dalili, ishara au historia kuhusiana na ugonjwa wako kutoka kwenye menyu.
             2. Bonyeza kitufe ili kuangalia kama una uwezekano wa malaria.
             3. Programu itakuonyesha kama una uwezekano wa kuwa na malaria au la.
     
@@ -140,7 +140,7 @@ with tab_sw:
     selected_symptoms_sw = st.multiselect(translations["symptoms_prompt"]["sw"], symptoms_sw + ["Dalili Nyingine"],placeholder = translations["symptoms_placeholder"]["sw"])
 
     if "Dalili Nyingine" in selected_symptoms_sw:
-        other_symptoms = st.text_area("Andika dalili zingine unazopata")
+        other_symptoms = st.text_area("Andika dalili nyingine unazopata")
         if other_symptoms:
             if st.button(translations["send_email_button"]["sw"]):
                 if other_symptoms:
