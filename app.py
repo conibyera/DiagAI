@@ -57,7 +57,7 @@ translations = {
             *Tafadhali kumbuka kuwa hii programu imeandaliwa kwa ajili ya uchunguzi wa haraka wa malaria na si mbadala wa ushauri wa kitaalamu wa matibabu.*
         """
     },
-    "symptoms_prompt": {"en": "Select history, symptoms or signs you have:", "sw": "Chagua historia, dalili au ishara ulizonazo:"},
+    "symptoms_prompt": {"en": "Select all history, symptoms or signs you have:", "sw": "Chagua historia, dalili au ishara zote ulizonazo:"},
     "symptoms_placeholder": {"en": "Choose options:", "sw": "Chagua zinazokuhusu:"},
     "button_results": {"en": "🐜Malaria Results", "sw": "🐜Matokeo ya Malaria"},
     "positive_result": {"en": "Probably positive for malaria", "sw": "Inawezekana una malaria"},
