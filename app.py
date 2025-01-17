@@ -16,7 +16,7 @@ symptoms_en = [
     "Abdominal Pain", "Loss of Appetite", "Body Weakness", "Blood in Urine",
     "Dizziness", "Epigastric Pain", "Eye Pain", "Fungal Infection", "Generalized Rash",
     "Joint Pain", "Numbness", "Pain Urinating", "Palpitations", "Vaginal Discharge",
-    "Runny Nose", "Scabies", "Treated for Malaria Recently"
+    "Runny Nose", "Scabies", "Chest Pain","Ear Pain","Treated for Malaria Recently"
 ]
 
 symptoms_sw = [
@@ -24,7 +24,8 @@ symptoms_sw = [
     "Maumivu ya Tumbo", "Kupoteza Hamu ya Kula", "Udhaifu wa Mwili", "Damu Katika Mkojo",
     "Kizunguzungu", "Maumivu ya Epigastriki", "Maumivu ya Macho", "Maambukizi ya Kuvu",
     "Upele wa Mwili", "Maumivu ya Viungo", "Kufa Ganzi", "Maumivu Wakati wa Mkojo", 
-    "Mapigo ya Moyo Kasi", "Uchafu wa Uke", "Mafua", "Kaskasi", "Umetibiwa Malaria Karibuni"
+    "Mapigo ya Moyo Kasi", "Uchafu wa Uke", "Mafua", "Kaskasi", "Maumivu ya Kifua", 
+    "Maumivu ya Sikio", "Umetibiwa Malaria Karibuni"
 ]
 
 # UI Translations
