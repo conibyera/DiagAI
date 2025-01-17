@@ -32,7 +32,7 @@ symptoms_sw = [
 translations = {
     "title": {"en": "DiagAI/1.0 for Rapid Malaria Diagnosis", "sw": "DiagAI/1.0 kwa Uchunguzi wa Haraka wa Malaria"},
     "sidebar_header": {"en": "About This App", "sw": "Kuhusu Programu Hii"},
-    "sidebar_content": {
+    "sidebar_content": {2
         "en": """
             DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient history input.
             
@@ -126,7 +126,7 @@ with tab_en:
     if st.button(translations["button_results"]["en"]):
         features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
         prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
-        if prediction > 0.24:
+        if prediction > 0.21:
             st.success(translations["positive_result"]["en"])
             st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
         else:
