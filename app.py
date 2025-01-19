@@ -16,7 +16,7 @@ symptoms_en = [
     "Abdominal Pain", "Loss of Appetite", "Body Weakness", "Blood in Urine",
     "Dizziness", "Epigastric Pain", "Eye Pain", "Fungal Infection", "Generalized Rash",
     "Joint Pain", "Numbness", "Pain Urinating", "Palpitations", "Vaginal Discharge",
-    "Runny Nose", "Scabies", "Chest Pain","Ear Pain","Treated for Malaria Recently"
+    "Runny Nose", "Scabies", "Chest Pain","Ear Pain","Back Pain", "Treated for Malaria Recently"
 ]
 
 symptoms_sw = [
@@ -25,7 +25,7 @@ symptoms_sw = [
     "Kizunguzungu", "Maumivu ya Epigastriki", "Maumivu ya Macho", "Maambukizi ya Kuvu",
     "Upele wa Mwili", "Maumivu ya Viungo", "Kufa Ganzi", "Maumivu Wakati wa Mkojo", 
     "Mapigo ya Moyo Kasi", "Uchafu wa Uke", "Mafua", "Kaskasi", "Maumivu ya Kifua", 
-    "Maumivu ya Sikio", "Umetibiwa Malaria Karibuni"
+    "Maumivu ya Sikio", "Maumivu ya Mgongo","Umetibiwa Malaria Karibuni"
 ]
 
 # UI Translations
@@ -126,7 +126,7 @@ with tab_en:
     if st.button(translations["button_results"]["en"]):
         features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
         prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
-        if prediction > 0.21:
+        if prediction > 0.43:
             st.success(translations["positive_result"]["en"])
             st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
         else:
