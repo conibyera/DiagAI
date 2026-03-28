@@ -146,14 +146,8 @@ def send_email(subject, body, receiver_email):
 # App Layout with Tabs
 tab_en, tab_sw = st.tabs(["English", "Kiswahili"])
 
-#Logout
+#Logged in
 st.sidebar.write(f"Logged in as: **{st.session_state.username}**")
-
-if st.sidebar.button("Logout"):
-    st.session_state.logged_in = False
-    st.session_state.username = ""
-    st.rerun()
-    
 # English Tab
 with tab_en:
     st.title(translations["title"]["en"])
@@ -219,3 +213,8 @@ with tab_sw:
             st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
         else:
             st.info(translations["negative_result"]["sw"])
+#Logout
+if st.sidebar.button("Logout"):
+    st.session_state.logged_in = False
+    st.session_state.username = ""
+    st.rerun()            
