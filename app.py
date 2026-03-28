@@ -1,4 +1,5 @@
 import streamlit as st
+import hashlib
 import numpy as np
 import tensorflow as tf
 import wikipediaapi
@@ -7,8 +8,60 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+import streamlit as st
+import hashlib
+import numpy as np
+import tensorflow as tf
+import wikipediaapi
+import re
+
+# ---------------- AUTH ----------------
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def check_login(username, password):
+    usernames = st.secrets["auth"]["usernames"]
+    password_hashes = st.secrets["auth"]["password_hashes"]
+
+    user_dict = dict(zip(usernames, password_hashes))
+
+    if username in user_dict:
+        return user_dict[username] == hash_password(password)
+    return False
+
+# Session state
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+# Login page
+if not st.session_state.logged_in:
+    st.title("DiagAI Login")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        if check_login(username, password):
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.success("Login successful")
+            st.rerun()
+        else:
+            st.error("Invalid username or password")
+
+    st.stop()
+
 # Load the saved model
-model = tf.keras.models.load_model('malar_model.keras')
+@st.cache_resource
+def load_model():
+    return tf.keras.models.load_model("malar_model.keras")
+
+model = load_model()
+
+#model = tf.keras.models.load_model('malar_model.keras')
 
 # Define symptoms in English and Swahili
 symptoms_en = [
@@ -100,6 +153,14 @@ def send_email(subject, body, receiver_email):
 # App Layout with Tabs
 tab_en, tab_sw = st.tabs(["English", "Kiswahili"])
 
+#Logout
+st.sidebar.write(f"Logged in as: **{st.session_state.username}**")
+
+if st.sidebar.button("Logout"):
+    st.session_state.logged_in = False
+    st.session_state.username = ""
+    st.rerun()
+    
 # English Tab
 with tab_en:
     st.title(translations["title"]["en"])
