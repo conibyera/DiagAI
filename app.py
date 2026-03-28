@@ -8,13 +8,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-import streamlit as st
-import hashlib
-import numpy as np
-import tensorflow as tf
-import wikipediaapi
-import re
-
 # ---------------- AUTH ----------------
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
