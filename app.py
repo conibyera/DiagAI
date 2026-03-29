@@ -179,8 +179,19 @@ def submit_to_database(username, language, selected_symptoms, other_symptoms, pr
 
 # ---------------- SIDEBAR ----------------
 st.sidebar.write(f"Logged in as: **{st.session_state.username}**")
-st.sidebar.header("About This App / Kuhusu Programu Hii")
-st.sidebar.write(translations["sidebar_content"]["en"])
+sidebar_language = st.sidebar.radio(
+    "🌐 Language / Lugha",
+    ["en", "sw"],
+    format_func=lambda x: "English" if x == "en" else "Kiswahili",
+    index=0
+)
+
+if sidebar_language == "en":
+    st.sidebar.header(translations["sidebar_header"]["en"])
+    st.sidebar.write(translations["sidebar_content"]["en"])
+else:
+    st.sidebar.header(translations["sidebar_header"]["sw"])
+    st.sidebar.write(translations["sidebar_content"]["sw"])
 
 if st.sidebar.button("Logout"):
     for key in defaults:
