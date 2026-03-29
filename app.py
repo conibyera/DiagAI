@@ -176,27 +176,27 @@ with tab_en:
         features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
         prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
 
-    if prediction > 0.43:
-        classification = "Probably positive for malaria"
-        st.success(translations["positive_result"]["en"])
-        st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
-    else:
-        classification = "Probably negative for malaria"
-        st.info(translations["negative_result"]["en"])
+        if prediction > 0.43:
+            classification = "Probably positive for malaria"
+            st.success(translations["positive_result"]["en"])
+            st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
+        else:
+            classification = "Probably negative for malaria"
+            st.info(translations["negative_result"]["en"])
 
-    other_text = other_symptoms if "Others" in selected_symptoms else ""
+        other_text = other_symptoms if "Others" in selected_symptoms else ""
 
-    saved = submit_to_database(
-        username=st.session_state.username,
-        language="English",
-        selected_symptoms=selected_symptoms,
-        other_symptoms=other_text,
-        prediction=prediction,
-        classification=classification
-    )
+        saved = submit_to_database(
+            username=st.session_state.username,
+            language="English",
+            selected_symptoms=selected_symptoms,
+            other_symptoms=other_text,
+            prediction=prediction,
+            classification=classification
+        )
 
-    if saved:
-        st.success("Response saved to database.")
+        if saved:
+            st.success("Response saved to database.")
 
 # Swahili Tab
 with tab_sw:
@@ -227,27 +227,27 @@ with tab_sw:
         features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
         prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
 
-    if prediction > 0.43:
-        classification = "Inawezekana una malaria"
-        st.success(translations["positive_result"]["sw"])
-        st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
-    else:
-        classification = "Inawezekana huna malaria"
-        st.info(translations["negative_result"]["sw"])
+        if prediction > 0.43:
+            classification = "Inawezekana una malaria"
+            st.success(translations["positive_result"]["sw"])
+            st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
+        else:
+            classification = "Inawezekana huna malaria"
+            st.info(translations["negative_result"]["sw"])
 
-    other_text = other_symptoms if "Dalili Nyingine" in selected_symptoms_sw else ""
+        other_text = other_symptoms if "Dalili Nyingine" in selected_symptoms_sw else ""
 
-    saved = submit_to_database(
-        username=st.session_state.username,
-        language="Kiswahili",
-        selected_symptoms=selected_symptoms_sw,
-        other_symptoms=other_text,
-        prediction=prediction,
-        classification=classification
-    )
+        saved = submit_to_database(
+            username=st.session_state.username,
+            language="Kiswahili",
+            selected_symptoms=selected_symptoms_sw,
+            other_symptoms=other_text,
+            prediction=prediction,
+            classification=classification
+        )
 
-    if saved:
-        st.success("Taarifa zimehifadhiwa kwenye kanzidata.")
+        if saved:
+            st.success("Taarifa zimehifadhiwa kwenye kanzidata.")
 
 def submit_to_database(username, language, selected_symptoms, other_symptoms, prediction, classification):
     url = "http://127.0.0.1:8000/submit"
