@@ -86,6 +86,10 @@ translations = {
         "en": "DiagAI/1.0 for Rapid Malaria Diagnosis",
         "sw": "DiagAI/1.0 kwa Uchunguzi wa Haraka wa Malaria"
     },
+    "sidebar_header": {
+        "en": "About This App",
+        "sw": "Kuhusu Programu Hii"
+    },
     "sidebar_content": {
         "en": """
 DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient history input.
