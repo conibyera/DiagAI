@@ -98,6 +98,14 @@ translations = {
         "en": "DiagAI/1.0 for Rapid Malaria Diagnosis",
         "sw": "DiagAI/1.0 kwa Uchunguzi wa Haraka wa Malaria"
     },
+    "send_email_button": {
+    "en": "📧 Submit Symptoms",
+    "sw": "📧 Tuma Dalili"
+    },
+    "send_email_warning": {
+        "en": "Please describe additional symptoms before sending.",
+        "sw": "Tafadhali eleza dalili zaidi kabla ya kutuma."
+    },
     "sidebar_header": {
         "en": "About This App",
         "sw": "Kuhusu Programu Hii"
@@ -230,17 +238,20 @@ with tab_en:
     )
 
     other_symptoms_en = ""
+
     if "Others" in selected_symptoms_en:
         other_symptoms_en = st.text_area("Please list any other symptoms or signs you have:")
 
-        if st.button("📧 Submit Symptoms", key="email_en"):
+        if st.button(translations["send_email_button"]["en"], key="send_email_en"):
             if other_symptoms_en.strip():
                 subject = "Additional Symptoms Submitted via App"
                 body = f"The user has submitted additional symptoms:\n\n{other_symptoms_en}"
-                if send_email(subject, body, "diagai2024@gmail.com"):
-                    st.success("Your symptoms have been sent successfully.")
+                receiver_email = "diagai2024@gmail.com"
+
+                if send_email(subject, body, receiver_email):
+                    st.success("Your symptoms have been sent successfully! Thank you.")
             else:
-                st.warning("Please describe additional symptoms before sending.")
+                st.warning(translations["send_email_warning"]["en"])
 
     if st.button("🐜 Get Malaria Results", key="predict_en"):
         features = [1 if symptom in selected_symptoms_en else 0 for symptom in symptoms_en]
@@ -289,17 +300,20 @@ with tab_sw:
     )
 
     other_symptoms_sw = ""
+
     if "Dalili Nyingine" in selected_symptoms_sw:
         other_symptoms_sw = st.text_area("Andika dalili nyingine unazopata")
 
-        if st.button("📧 Tuma Dalili", key="email_sw"):
+        if st.button(translations["send_email_button"]["sw"], key="send_email_sw"):
             if other_symptoms_sw.strip():
                 subject = "Dalili za Ziada Zimetumwa Kupitia Programu"
                 body = f"Mtumiaji ametuma dalili zifuatazo:\n\n{other_symptoms_sw}"
-                if send_email(subject, body, "diagai2024@gmail.com"):
-                    st.success("Dalili zako zimetumwa kikamilifu.")
+                receiver_email = "diagai2024@gmail.com"
+
+                if send_email(subject, body, receiver_email):
+                    st.success("Dalili zako zimetumwa kikamilifu! Asante.")
             else:
-                st.warning("Tafadhali andika dalili nyingine kabla ya kutuma ujumbe.")
+                st.warning(translations["send_email_warning"]["sw"])
 
     selected_symptoms_mapped = [
         symptoms_en[symptoms_sw.index(symptom)]
