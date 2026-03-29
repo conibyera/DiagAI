@@ -49,13 +49,17 @@ for key, value in defaults.items():
 if not st.session_state.logged_in:
     st.title("DiagAI Login")
 
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    with st.form("login_form", clear_on_submit=False):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        login_submitted = st.form_submit_button("Login")
 
-    if st.button("Login"):
-        if check_login(username, password):
+    if login_submitted:
+        if not username.strip() or not password.strip():
+            st.warning("Please enter both username and password.")
+        elif check_login(username, password):
             st.session_state.logged_in = True
-            st.session_state.username = normalize_username(username)
+            st.session_state.username = username.lower().strip()
             st.success("Login successful")
             st.rerun()
         else:
