@@ -149,6 +149,30 @@ tab_en, tab_sw = st.tabs(["English", "Kiswahili"])
 
 #Logged in
 st.sidebar.write(f"Logged in as: **{st.session_state.username}**")
+
+def submit_to_database(username, language, selected_symptoms, other_symptoms, prediction, classification):
+    url = "http://127.0.0.1:8000/submit"
+
+    payload = {
+        "username": username,
+        "language": language,
+        "selected_symptoms": selected_symptoms,
+        "other_symptoms": other_symptoms,
+        "prediction": float(prediction),
+        "classification": classification
+    }
+
+    try:
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            return True
+        else:
+            st.error(f"Submission failed: {response.text}")
+            return False
+    except Exception as e:
+        st.error(f"Error connecting to database server: {str(e)}")
+        return False
+
 # English Tab
 with tab_en:
     st.title(translations["title"]["en"])
@@ -249,28 +273,6 @@ with tab_sw:
         if saved:
             st.success("Taarifa zimehifadhiwa kwenye kanzidata.")
 
-def submit_to_database(username, language, selected_symptoms, other_symptoms, prediction, classification):
-    url = "http://127.0.0.1:8000/submit"
-
-    payload = {
-        "username": username,
-        "language": language,
-        "selected_symptoms": selected_symptoms,
-        "other_symptoms": other_symptoms,
-        "prediction": float(prediction),
-        "classification": classification
-    }
-
-    try:
-        response = requests.post(url, json=payload)
-        if response.status_code == 200:
-            return True
-        else:
-            st.error(f"Submission failed: {response.text}")
-            return False
-    except Exception as e:
-        st.error(f"Error connecting to database server: {str(e)}")
-        return False
 #Logout
 if st.sidebar.button("Logout"):
     st.session_state.logged_in = False
