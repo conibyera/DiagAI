@@ -16,12 +16,20 @@ st.set_page_config(page_title="DiagAI", layout="centered")
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
+def normalize_username(username):
+    return username.lower().strip()
+    
 def check_login(username, password):
-    usernames = st.secrets["auth"]["usernames"]
+    usernames = [normalize_username(u) for u in st.secrets["auth"]["usernames"]]
     password_hashes = st.secrets["auth"]["password_hashes"]
 
     user_dict = dict(zip(usernames, password_hashes))
-    return username in user_dict and user_dict[username] == hash_password(password)
+
+    username = normalize_username(username)
+
+    if username in user_dict:
+        return user_dict[username] == hash_password(password)
+    return False
 
 # ---------------- SESSION STATE ----------------
 defaults = {
@@ -47,7 +55,7 @@ if not st.session_state.logged_in:
     if st.button("Login"):
         if check_login(username, password):
             st.session_state.logged_in = True
-            st.session_state.username = username
+            st.session_state.username = normalize_username(username)
             st.success("Login successful")
             st.rerun()
         else:
