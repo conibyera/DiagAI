@@ -9,6 +9,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(page_title="DiagAI", layout="centered")
+
 # ---------------- AUTH ----------------
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -18,19 +21,23 @@ def check_login(username, password):
     password_hashes = st.secrets["auth"]["password_hashes"]
 
     user_dict = dict(zip(usernames, password_hashes))
+    return username in user_dict and user_dict[username] == hash_password(password)
 
-    if username in user_dict:
-        return user_dict[username] == hash_password(password)
-    return False
+# ---------------- SESSION STATE ----------------
+defaults = {
+    "logged_in": False,
+    "username": "",
+    "prediction_en": None,
+    "classification_en": None,
+    "prediction_sw": None,
+    "classification_sw": None
+}
 
-# Session state
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
-if "username" not in st.session_state:
-    st.session_state.username = ""
-
-# Login page
+# ---------------- LOGIN PAGE ----------------
 if not st.session_state.logged_in:
     st.title("DiagAI Login")
 
@@ -48,92 +55,85 @@ if not st.session_state.logged_in:
 
     st.stop()
 
-# Load the saved model
+# ---------------- LOAD MODEL ----------------
 @st.cache_resource
 def load_model():
     return tf.keras.models.load_model("malar_model.keras")
 
 model = load_model()
 
-#model = tf.keras.models.load_model('malar_model.keras')
-
-# Define symptoms in English and Swahili
+# ---------------- SYMPTOMS ----------------
 symptoms_en = [
     "Fever", "Vomiting", "Cough", "Diarrhoea", "Headache", "Body Pain",
     "Abdominal Pain", "Loss of Appetite", "Body Weakness", "Blood in Urine",
     "Dizziness", "Epigastric Pain", "Eye Pain", "Fungal Infection", "Generalized Rash",
     "Joint Pain", "Numbness", "Pain Urinating", "Palpitations", "Vaginal Discharge",
-    "Runny Nose", "Scabies", "Chest Pain","Ear Pain","Back Pain", "Treated for Malaria Recently"
+    "Runny Nose", "Scabies", "Chest Pain", "Ear Pain", "Back Pain", "Treated for Malaria Recently"
 ]
 
 symptoms_sw = [
     "Homa", "Kutapika", "Kikohozi", "Kuhara", "Kichwa Kuuma", "Maumivu ya Mwili",
     "Maumivu ya Tumbo", "Kupoteza Hamu ya Kula", "Udhaifu wa Mwili", "Damu Katika Mkojo",
     "Kizunguzungu", "Maumivu ya Epigastriki", "Maumivu ya Macho", "Maambukizi ya Kuvu",
-    "Upele wa Mwili", "Maumivu ya Viungo", "Kufa Ganzi", "Maumivu Wakati wa Mkojo", 
-    "Mapigo ya Moyo Kasi", "Uchafu wa Uke", "Mafua", "Kaskasi", "Maumivu ya Kifua", 
-    "Maumivu ya Sikio", "Maumivu ya Mgongo","Umetibiwa Malaria Karibuni"
+    "Upele wa Mwili", "Maumivu ya Viungo", "Kufa Ganzi", "Maumivu Wakati wa Mkojo",
+    "Mapigo ya Moyo Kasi", "Uchafu wa Uke", "Mafua", "Kaskasi", "Maumivu ya Kifua",
+    "Maumivu ya Sikio", "Maumivu ya Mgongo", "Umetibiwa Malaria Karibuni"
 ]
 
-# UI Translations
+# ---------------- UI TEXT ----------------
 translations = {
-    "title": {"en": "DiagAI/1.0 for Rapid Malaria Diagnosis", "sw": "DiagAI/1.0 kwa Uchunguzi wa Haraka wa Malaria"},
-    "sidebar_header": {"en": "About This App", "sw": "Kuhusu Programu Hii"},
+    "title": {
+        "en": "DiagAI/1.0 for Rapid Malaria Diagnosis",
+        "sw": "DiagAI/1.0 kwa Uchunguzi wa Haraka wa Malaria"
+    },
     "sidebar_content": {
         "en": """
-            DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient history input.
-            
-            This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms, signs, or patient history.
-            
-            **How to Use:**
-            1. Select the symptoms and signs you are experiencing or history from the dropdown menu.
-            2. Click on the buttons to check the disease status for malaria.
-            3. The app will indicate whether you are probably positive or negative for malaria.
-    
-            *Please remember that this application is a rapid diagnostic tool and not a substitute for professional medical advice.*
-        """,
+DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient history input.
+
+This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms, signs, or patient history.
+
+**How to Use:**
+1. Select the symptoms and signs you are experiencing or history from the dropdown menu.
+2. Click **Get Malaria Results**.
+3. Review the prediction.
+4. Optionally save the response to the database.
+
+*This application is a rapid screening tool and not a substitute for professional medical advice.*
+""",
         "sw": """
-            DiagAI ni programu ya mtandao iliyoundwa kwa uchunguzi wa haraka wa magonjwa kulingana na dalili, ishara, na historia ya mgonjwa.
-            
-            Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa kuzingatia historia, dalili na ishara zilizoainishwa na mgonjwa au mtabibu wake.
-            
-            **Maelekezo:**
-            1. Chagua dalili, ishara au historia kuhusiana na ugonjwa wako kutoka kwenye menyu.
-            2. Bonyeza kitufe ili kuangalia kama una uwezekano wa malaria.
-            3. Programu itakuonyesha kama una uwezekano wa kuwa na malaria au la.
-    
-            *Tafadhali kumbuka kuwa hii programu imeandaliwa kwa ajili ya uchunguzi wa haraka wa malaria na si mbadala wa ushauri wa kitaalamu wa matibabu.*
-        """
-    },
-    "symptoms_prompt": {"en": "Select all history, symptoms or signs you have:", "sw": "Chagua historia, dalili au ishara zote ulizonazo:"},
-    "symptoms_placeholder": {"en": "Choose options:", "sw": "Chagua zinazokuhusu:"},
-    "button_results": {"en": "🐜Malaria Results", "sw": "🐜Matokeo ya Malaria"},
-    "positive_result": {"en": "Probably positive for malaria", "sw": "Inawezekana una malaria"},
-    "negative_result": {"en": "Probably negative for malaria", "sw": "Inawezekana huna malaria"},
-    "send_email_button": {"en": "📧 Submit Symptoms", "sw": "📧 Tuma Dalili"},
-    "send_email_warning": {"en": "Please describe additional symptoms before sending.", "sw": "Tafadhali eleza dalili zaidi kabla ya kutuma."}
+DiagAI ni programu ya mtandao iliyoundwa kwa uchunguzi wa haraka wa magonjwa kulingana na dalili, ishara, na historia ya mgonjwa.
+
+Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa kuzingatia historia, dalili na ishara zilizoainishwa na mgonjwa au mtabibu wake.
+
+**Maelekezo:**
+1. Chagua dalili, ishara au historia kuhusiana na ugonjwa wako kutoka kwenye menyu.
+2. Bonyeza **Matokeo ya Malaria**.
+3. Angalia matokeo.
+4. Unaweza kuhifadhi taarifa kwenye kanzidata.
+
+*Programu hii ni chombo cha uchunguzi wa haraka na si mbadala wa ushauri wa kitaalamu wa matibabu.*
+"""
+    }
 }
 
-# Function to fetch Wikipedia summary
+# ---------------- HELPERS ----------------
 def get_wikipedia_summary(disease, num_sentences=5, lang="en"):
-    wiki_wiki = wikipediaapi.Wikipedia(language=lang, user_agent='DiagAI/1.0')
+    wiki_wiki = wikipediaapi.Wikipedia(language=lang, user_agent="DiagAI/1.0")
     page = wiki_wiki.page(disease)
     if page.exists():
         sentences = re.split(r'(?<=[.!?])\s*', page.summary)
-        return ' '.join(sentences[:num_sentences])
-    else:
-        return f"No information found for {disease}."
+        return " ".join(sentences[:num_sentences])
+    return f"No information found for {disease}."
 
-# Function to send email
 def send_email(subject, body, receiver_email):
     sender_email = st.secrets["email"]["sender_email"]
     sender_password = st.secrets["email"]["sender_password"]
 
     msg = MIMEMultipart()
-    msg['From'] = sender_email
-    msg['To'] = receiver_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
+    msg["From"] = sender_email
+    msg["To"] = receiver_email
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain"))
 
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
@@ -144,14 +144,8 @@ def send_email(subject, body, receiver_email):
         st.error(f"Error sending email: {str(e)}")
         return False
 
-# App Layout with Tabs
-tab_en, tab_sw = st.tabs(["English", "Kiswahili"])
-
-#Logged in
-st.sidebar.write(f"Logged in as: **{st.session_state.username}**")
-
 def submit_to_database(username, language, selected_symptoms, other_symptoms, prediction, classification):
-    url = "http://127.0.0.1:8000/submit"
+    url = "http://127.0.0.1:8000/submit"   # replace later with deployed API URL
 
     payload = {
         "username": username,
@@ -163,7 +157,7 @@ def submit_to_database(username, language, selected_symptoms, other_symptoms, pr
     }
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         if response.status_code == 200:
             return True
         else:
@@ -173,108 +167,139 @@ def submit_to_database(username, language, selected_symptoms, other_symptoms, pr
         st.error(f"Error connecting to database server: {str(e)}")
         return False
 
-# English Tab
+# ---------------- SIDEBAR ----------------
+st.sidebar.write(f"Logged in as: **{st.session_state.username}**")
+st.sidebar.header("About This App / Kuhusu Programu Hii")
+st.sidebar.write(translations["sidebar_content"]["en"])
+
+if st.sidebar.button("Logout"):
+    for key in defaults:
+        st.session_state[key] = defaults[key]
+    st.rerun()
+
+# ---------------- TABS ----------------
+tab_en, tab_sw = st.tabs(["English", "Kiswahili"])
+
+# =========================================================
+# ENGLISH TAB
+# =========================================================
 with tab_en:
     st.title(translations["title"]["en"])
-    st.sidebar.header(translations["sidebar_header"]["en"])
-    st.sidebar.write(translations["sidebar_content"]["en"])
 
-    selected_symptoms = st.multiselect(translations["symptoms_prompt"]["en"], symptoms_en + ["Others"],placeholder = translations["symptoms_placeholder"]["en"])
-    
-    if "Others" in selected_symptoms:
-        other_symptoms = st.text_area("Please list any other symptoms or signs you have:")
-        if other_symptoms:
-            if st.button(translations["send_email_button"]["en"]):
-                if other_symptoms:
-                    subject = "Additional Symptoms Submitted via App"
-                    body = f"The user has submitted additional symptoms:\n\n{other_symptoms}"
-                    receiver_email = "diagai2024@gmail.com"
-                    if send_email(subject, body, receiver_email):
-                        st.success("Your symptoms have been sent successfully! Thank you.")
-                else:
-                    st.warning(translations["send_email_warning"]["en"])
-        else:
-            st.warning("Please describe additional symptoms before sending.")
+    selected_symptoms_en = st.multiselect(
+        "Select all history, symptoms or signs you have:",
+        symptoms_en + ["Others"],
+        placeholder="Choose options:"
+    )
 
-    if st.button(translations["button_results"]["en"]):
-        features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
-        prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
+    other_symptoms_en = ""
+    if "Others" in selected_symptoms_en:
+        other_symptoms_en = st.text_area("Please list any other symptoms or signs you have:")
+
+        if st.button("📧 Submit Symptoms", key="email_en"):
+            if other_symptoms_en.strip():
+                subject = "Additional Symptoms Submitted via App"
+                body = f"The user has submitted additional symptoms:\n\n{other_symptoms_en}"
+                if send_email(subject, body, "diagai2024@gmail.com"):
+                    st.success("Your symptoms have been sent successfully.")
+            else:
+                st.warning("Please describe additional symptoms before sending.")
+
+    if st.button("🐜 Get Malaria Results", key="predict_en"):
+        features = [1 if symptom in selected_symptoms_en else 0 for symptom in symptoms_en]
+        prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
+
+        st.session_state.prediction_en = float(prediction)
 
         if prediction > 0.43:
-            classification = "Probably positive for malaria"
-            st.success(translations["positive_result"]["en"])
+            st.session_state.classification_en = "Probably positive for malaria"
+        else:
+            st.session_state.classification_en = "Probably negative for malaria"
+
+    # Show saved result if available
+    if st.session_state.prediction_en is not None:
+        if st.session_state.classification_en == "Probably positive for malaria":
+            st.success(st.session_state.classification_en)
             st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
         else:
-            classification = "Probably negative for malaria"
-            st.info(translations["negative_result"]["en"])
+            st.info(st.session_state.classification_en)
 
-        other_text = other_symptoms if "Others" in selected_symptoms else ""
+        st.write(f"**Prediction Score:** {st.session_state.prediction_en:.3f}")
 
-        saved = submit_to_database(
-            username=st.session_state.username,
-            language="English",
-            selected_symptoms=selected_symptoms,
-            other_symptoms=other_text,
-            prediction=prediction,
-            classification=classification
-        )
+        if st.button("💾 Save Response", key="save_en"):
+            saved = submit_to_database(
+                username=st.session_state.username,
+                language="English",
+                selected_symptoms=selected_symptoms_en,
+                other_symptoms=other_symptoms_en,
+                prediction=st.session_state.prediction_en,
+                classification=st.session_state.classification_en
+            )
 
-        if saved:
-            st.success("Response saved to database.")
+            if saved:
+                st.success("Response saved to database.")
 
-# Swahili Tab
+# =========================================================
+# SWAHILI TAB
+# =========================================================
 with tab_sw:
     st.title(translations["title"]["sw"])
-    st.sidebar.header(translations["sidebar_header"]["sw"])
-    st.sidebar.write(translations["sidebar_content"]["sw"])
-    
-    selected_symptoms_sw = st.multiselect(translations["symptoms_prompt"]["sw"], symptoms_sw + ["Dalili Nyingine"],placeholder = translations["symptoms_placeholder"]["sw"])
 
+    selected_symptoms_sw = st.multiselect(
+        "Chagua historia, dalili au ishara zote ulizonazo:",
+        symptoms_sw + ["Dalili Nyingine"],
+        placeholder="Chagua zinazokuhusu:"
+    )
+
+    other_symptoms_sw = ""
     if "Dalili Nyingine" in selected_symptoms_sw:
-        other_symptoms = st.text_area("Andika dalili nyingine unazopata")
-        if other_symptoms:
-            if st.button(translations["send_email_button"]["sw"]):
-                if other_symptoms:
-                    subject = "Dalili za Ziada Zimetumwa Kupitia Programu"
-                    body = f"Mtumiaji ametuma dalili zifuatazo:\n\n{other_symptoms}"
-                    receiver_email = "diagai2024@gmail.com"
-                    if send_email(subject, body, receiver_email):
-                        st.success("Dalili zako zimetumwa kikamilifu! Asante.")
-                else:
-                    st.warning(translations["send_email_warning"]["sw"])
+        other_symptoms_sw = st.text_area("Andika dalili nyingine unazopata")
+
+        if st.button("📧 Tuma Dalili", key="email_sw"):
+            if other_symptoms_sw.strip():
+                subject = "Dalili za Ziada Zimetumwa Kupitia Programu"
+                body = f"Mtumiaji ametuma dalili zifuatazo:\n\n{other_symptoms_sw}"
+                if send_email(subject, body, "diagai2024@gmail.com"):
+                    st.success("Dalili zako zimetumwa kikamilifu.")
+            else:
+                st.warning("Tafadhali andika dalili nyingine kabla ya kutuma ujumbe.")
+
+    selected_symptoms_mapped = [
+        symptoms_en[symptoms_sw.index(symptom)]
+        for symptom in selected_symptoms_sw
+        if symptom != "Dalili Nyingine"
+    ]
+
+    if st.button("🐜 Matokeo ya Malaria", key="predict_sw"):
+        features = [1 if symptom in selected_symptoms_mapped else 0 for symptom in symptoms_en]
+        prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
+
+        st.session_state.prediction_sw = float(prediction)
+
+        if prediction > 0.24:
+            st.session_state.classification_sw = "Inawezekana una malaria"
         else:
-            st.warning("Tafadhali andika dalili nyingine kabla ya kutuma ujumbe.")
+            st.session_state.classification_sw = "Inawezekana huna malaria"
 
-    selected_symptoms = [symptoms_en[symptoms_sw.index(symptom)] for symptom in selected_symptoms_sw if symptom != "Dalili Nyingine"]
-
-    if st.button(translations["button_results"]["sw"]):
-        features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
-        prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
-
-        if prediction > 0.43:
-            classification = "Inawezekana una malaria"
-            st.success(translations["positive_result"]["sw"])
+    # Show saved result if available
+    if st.session_state.prediction_sw is not None:
+        if st.session_state.classification_sw == "Inawezekana una malaria":
+            st.success(st.session_state.classification_sw)
             st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
         else:
-            classification = "Inawezekana huna malaria"
-            st.info(translations["negative_result"]["sw"])
+            st.info(st.session_state.classification_sw)
 
-        other_text = other_symptoms if "Dalili Nyingine" in selected_symptoms_sw else ""
+        st.write(f"**Prediction Score:** {st.session_state.prediction_sw:.3f}")
 
-        saved = submit_to_database(
-            username=st.session_state.username,
-            language="Kiswahili",
-            selected_symptoms=selected_symptoms_sw,
-            other_symptoms=other_text,
-            prediction=prediction,
-            classification=classification
-        )
+        if st.button("💾 Hifadhi Taarifa", key="save_sw"):
+            saved = submit_to_database(
+                username=st.session_state.username,
+                language="Kiswahili",
+                selected_symptoms=selected_symptoms_sw,
+                other_symptoms=other_symptoms_sw,
+                prediction=st.session_state.prediction_sw,
+                classification=st.session_state.classification_sw
+            )
 
-        if saved:
-            st.success("Taarifa zimehifadhiwa kwenye kanzidata.")
-
-#Logout
-if st.sidebar.button("Logout"):
-    st.session_state.logged_in = False
-    st.session_state.username = ""
-    st.rerun()            
+            if saved:
+                st.success("Taarifa zimehifadhiwa kwenye kanzidata.")
