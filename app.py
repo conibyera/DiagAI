@@ -158,13 +158,23 @@ def submit_to_database(username, language, selected_symptoms, other_symptoms, pr
 
     try:
         response = requests.post(url, json=payload, timeout=10)
+
         if response.status_code == 200:
             return True
         else:
-            st.error(f"Submission failed: {response.text}")
+            st.warning("Response could not be saved at this time.")
             return False
-    except Exception as e:
-        st.error(f"Error connecting to database server: {str(e)}")
+
+    except requests.exceptions.ConnectionError:
+        st.info("Database saving is not yet active in the cloud version of this app.")
+        return False
+
+    except requests.exceptions.Timeout:
+        st.warning("Database server did not respond in time.")
+        return False
+
+    except Exception:
+        st.warning("An unexpected error occurred while saving the response.")
         return False
 
 # ---------------- SIDEBAR ----------------
