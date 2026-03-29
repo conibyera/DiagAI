@@ -286,7 +286,7 @@ with tab_sw:
 
         st.session_state.prediction_sw = float(prediction)
 
-        if prediction > 0.24:
+        if prediction > 0.43:
             st.session_state.classification_sw = "Inawezekana una malaria"
         else:
             st.session_state.classification_sw = "Inawezekana huna malaria"
@@ -299,7 +299,7 @@ with tab_sw:
         else:
             st.info(st.session_state.classification_sw)
 
-        st.write(f"**Prediction Score:** {st.session_state.prediction_sw:.3f}")
+        st.write(f"**Alama ya Utabiri:** {st.session_state.prediction_sw:.3f}")
 
         if st.button("💾 Hifadhi Taarifa", key="save_sw"):
             saved = submit_to_database(
