@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import wikipediaapi
 import re
+import requests
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -172,13 +173,30 @@ with tab_en:
             st.warning("Please describe additional symptoms before sending.")
 
     if st.button(translations["button_results"]["en"]):
-        features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
-        prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
-        if prediction > 0.43:
-            st.success(translations["positive_result"]["en"])
-            st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
-        else:
-            st.info(translations["negative_result"]["en"])
+    features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
+    prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
+
+    if prediction > 0.43:
+        classification = "Probably positive for malaria"
+        st.success(translations["positive_result"]["en"])
+        st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
+    else:
+        classification = "Probably negative for malaria"
+        st.info(translations["negative_result"]["en"])
+
+    other_text = other_symptoms if "Others" in selected_symptoms else ""
+
+    saved = submit_to_database(
+        username=st.session_state.username,
+        language="English",
+        selected_symptoms=selected_symptoms,
+        other_symptoms=other_text,
+        prediction=prediction,
+        classification=classification
+    )
+
+    if saved:
+        st.success("Response saved to database.")
 
 # Swahili Tab
 with tab_sw:
@@ -206,13 +224,53 @@ with tab_sw:
     selected_symptoms = [symptoms_en[symptoms_sw.index(symptom)] for symptom in selected_symptoms_sw if symptom != "Dalili Nyingine"]
 
     if st.button(translations["button_results"]["sw"]):
-        features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
-        prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
-        if prediction > 0.24:
-            st.success(translations["positive_result"]["sw"])
-            st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
+    features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
+    prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
+
+    if prediction > 0.43:
+        classification = "Inawezekana una malaria"
+        st.success(translations["positive_result"]["sw"])
+        st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
+    else:
+        classification = "Inawezekana huna malaria"
+        st.info(translations["negative_result"]["sw"])
+
+    other_text = other_symptoms if "Dalili Nyingine" in selected_symptoms_sw else ""
+
+    saved = submit_to_database(
+        username=st.session_state.username,
+        language="Kiswahili",
+        selected_symptoms=selected_symptoms_sw,
+        other_symptoms=other_text,
+        prediction=prediction,
+        classification=classification
+    )
+
+    if saved:
+        st.success("Taarifa zimehifadhiwa kwenye kanzidata.")
+
+def submit_to_database(username, language, selected_symptoms, other_symptoms, prediction, classification):
+    url = "http://127.0.0.1:8000/submit"
+
+    payload = {
+        "username": username,
+        "language": language,
+        "selected_symptoms": selected_symptoms,
+        "other_symptoms": other_symptoms,
+        "prediction": float(prediction),
+        "classification": classification
+    }
+
+    try:
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            return True
         else:
-            st.info(translations["negative_result"]["sw"])
+            st.error(f"Submission failed: {response.text}")
+            return False
+    except Exception as e:
+        st.error(f"Error connecting to database server: {str(e)}")
+        return False
 #Logout
 if st.sidebar.button("Logout"):
     st.session_state.logged_in = False
