@@ -173,8 +173,8 @@ with tab_en:
             st.warning("Please describe additional symptoms before sending.")
 
     if st.button(translations["button_results"]["en"]):
-    features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
-    prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
+        features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
+        prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
 
     if prediction > 0.43:
         classification = "Probably positive for malaria"
@@ -224,8 +224,8 @@ with tab_sw:
     selected_symptoms = [symptoms_en[symptoms_sw.index(symptom)] for symptom in selected_symptoms_sw if symptom != "Dalili Nyingine"]
 
     if st.button(translations["button_results"]["sw"]):
-    features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
-    prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
+        features = [1 if symptom in selected_symptoms else 0 for symptom in symptoms_en]
+        prediction = model.predict(np.array(features).reshape(1, -1))[0][0]
 
     if prediction > 0.43:
         classification = "Inawezekana una malaria"
