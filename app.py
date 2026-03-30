@@ -10,9 +10,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # ---------------- PAGE CONFIG ----------------
-st.set_page_config(page_title="DiagAI", layout="centered")
+st.set_page_config(page_title="DiagAI", page_icon="🩺", layout="centered")
 
-# ---------------- AUTH ----------------
+# ---------------- HELPERS ----------------
 def normalize_username(username):
     return username.lower().strip()
 
@@ -34,28 +34,13 @@ def is_valid_patient_id(patient_id):
     return bool(re.fullmatch(r"[A-Za-z0-9]+", patient_id.strip()))
 
 # ---------------- SESSION STATE ----------------
-defaults = {
-    "logged_in": False,
-    "username": "",
-    "prediction_en": None,
-    "classification_en": None,
-    "prediction_sw": None,
-    "classification_sw": None
-}
-
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
-
-# ---------------- LOGIN PAGE ----------------
-# Session state
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-# Login page
+# ---------------- LOGIN ----------------
 if not st.session_state.logged_in:
     st.title("DiagAI Login")
     st.caption("Please log in to continue.")
@@ -78,7 +63,7 @@ if not st.session_state.logged_in:
 
     st.stop()
 
-# ---------------- LOAD MODEL ----------------
+# ---------------- MODEL ----------------
 @st.cache_resource
 def load_model():
     return tf.keras.models.load_model("malar_model.keras")
@@ -103,7 +88,7 @@ symptoms_sw = [
     "Maumivu ya Sikio", "Maumivu ya Mgongo", "Umetibiwa Malaria Karibuni"
 ]
 
-# ---------------- UI TEXT ----------------
+# ---------------- TRANSLATIONS ----------------
 translations = {
     "title": {
         "en": "DiagAI/1.0 for Rapid Malaria Diagnosis",
@@ -117,31 +102,31 @@ translations = {
 
     "sidebar_content": {
         "en": """
-            DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient history input.
-            
-            This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms, signs, or patient history.
-            
-            **How to Use:**
-            1. Enter Patient ID and select location.
-            2. Select the symptoms, signs, or history from the dropdown menu.
-            3. Click the button to check the malaria result.
-            4. Optionally save the response to the database.
-    
-            *Please remember that this application is a rapid diagnostic tool and not a substitute for professional medical advice.*
+DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient history input.
+
+This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms, signs, or patient history.
+
+**How to Use:**
+1. Enter Patient ID and select location.
+2. Select the symptoms, signs, or history from the dropdown menu.
+3. Click the button to check the malaria result.
+4. Optionally save the response to the database.
+
+*Please remember that this application is a rapid diagnostic tool and not a substitute for professional medical advice.*
         """,
 
         "sw": """
-            DiagAI ni programu ya mtandao iliyoundwa kwa uchunguzi wa haraka wa magonjwa kulingana na dalili, ishara, na historia ya mgonjwa.
-            
-            Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa kuzingatia historia, dalili na ishara zilizoainishwa na mgonjwa au mtabibu wake.
-            
-            **Maelekezo:**
-            1. Weka namba ya mgonjwa na uchague mahali.
-            2. Chagua dalili, ishara au historia kutoka kwenye menyu.
-            3. Bonyeza kitufe ili kuangalia matokeo ya malaria.
-            4. Unaweza kuhifadhi taarifa kwenye kanzidata.
-    
-            *Tafadhali kumbuka kuwa hii programu imeandaliwa kwa ajili ya uchunguzi wa haraka wa malaria na si mbadala wa ushauri wa kitaalamu wa matibabu.*
+DiagAI ni programu ya mtandao iliyoundwa kwa uchunguzi wa haraka wa magonjwa kulingana na dalili, ishara, na historia ya mgonjwa.
+
+Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa kuzingatia historia, dalili na ishara zilizoainishwa na mgonjwa au mtabibu wake.
+
+**Maelekezo:**
+1. Weka namba ya mgonjwa na uchague mahali.
+2. Chagua dalili, ishara au historia kutoka kwenye menyu.
+3. Bonyeza kitufe ili kuangalia matokeo ya malaria.
+4. Unaweza kuhifadhi taarifa kwenye kanzidata.
+
+*Tafadhali kumbuka kuwa hii programu imeandaliwa kwa ajili ya uchunguzi wa haraka wa malaria na si mbadala wa ushauri wa kitaalamu wa matibabu.*
         """
     },
 
@@ -216,27 +201,24 @@ translations = {
     }
 }
 
+# Swahili display -> English standardized save
 location_map_sw_to_en = {
     "Vijijini": "Rural",
     "Pembezoni mwa Mji": "Peri-Urban",
     "Mjini": "Urban"
 }
 
-location_sw = st.selectbox(
-    translations["location_label"]["sw"],
-    translations["location_options"]["sw"],
-    key="location_sw"
-)
-
-# ---------------- HELPERS ----------------
+# ---------------- WIKIPEDIA ----------------
 def get_wikipedia_summary(disease, num_sentences=5, lang="en"):
     wiki_wiki = wikipediaapi.Wikipedia(language=lang, user_agent="DiagAI/1.0")
     page = wiki_wiki.page(disease)
     if page.exists():
         sentences = re.split(r'(?<=[.!?])\s*', page.summary)
         return " ".join(sentences[:num_sentences])
-    return f"No information found for {disease}."
+    else:
+        return f"No information found for {disease}."
 
+# ---------------- EMAIL ----------------
 def send_email(subject, body, receiver_email):
     sender_email = st.secrets["email"]["sender_email"]
     sender_password = st.secrets["email"]["sender_password"]
@@ -256,8 +238,9 @@ def send_email(subject, body, receiver_email):
         st.error(f"Error sending email: {str(e)}")
         return False
 
+# ---------------- API SUBMISSION ----------------
 def submit_to_database(username, patient_id, location, language, selected_symptoms, other_symptoms, prediction, classification):
-    url = "http://127.0.0.1:8000/submit"   # replace later with deployed API URL
+    url = "http://127.0.0.1:8000/submit"  # replace later with deployed API URL
 
     payload = {
         "username": username,
@@ -290,7 +273,7 @@ def submit_to_database(username, patient_id, location, language, selected_sympto
     except Exception as e:
         st.warning(f"Unexpected error while saving: {str(e)}")
         return False
-        
+
 # ---------------- SIDEBAR ----------------
 st.sidebar.write(f"**Logged in as:** {st.session_state.username}")
 
@@ -312,12 +295,11 @@ if st.sidebar.button("Logout"):
     st.session_state.logged_in = False
     st.session_state.username = ""
     st.rerun()
-# ---------------- TABS ----------------
+
+# ---------------- MAIN TABS ----------------
 tab_en, tab_sw = st.tabs(["English", "Kiswahili"])
 
-# =========================================================
-# ENGLISH TAB
-# =========================================================
+# ================= ENGLISH TAB =================
 with tab_en:
     st.title(translations["title"]["en"])
 
@@ -398,9 +380,7 @@ with tab_en:
                 if saved:
                     st.success(translations["save_success"]["en"])
 
-# =========================================================
-# SWAHILI TAB
-# =========================================================
+# ================= SWAHILI TAB =================
 with tab_sw:
     st.title(translations["title"]["sw"])
 
@@ -460,7 +440,7 @@ with tab_sw:
             st.session_state.patient_id_sw = patient_id_sw.strip()
             st.session_state.location_sw = location_map_sw_to_en[location_sw]
 
-            if prediction > 0.24:
+            if prediction > 0.43:
                 st.session_state.classification_sw = "Inawezekana una malaria"
                 st.success(translations["positive_result"]["sw"])
                 st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
