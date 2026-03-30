@@ -341,25 +341,25 @@ with tab_en:
                 st.warning(translations["send_email_warning"]["en"])
 
     if st.button(translations["button_results"]["en"], key="predict_en"):
-    if not is_valid_patient_id(patient_id_en):
-        st.error(translations["patient_id_error"]["en"])
-    else:
-        features = [1 if symptom in selected_symptoms_en else 0 for symptom in symptoms_en]
-        prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
-
-        st.session_state.prediction_en = float(prediction)
-        st.session_state.selected_symptoms_saved_en = selected_symptoms_en
-        st.session_state.other_symptoms_saved_en = other_symptoms_en
-        st.session_state.patient_id_saved_en = patient_id_en.strip()
-        st.session_state.location_saved_en = location_en
-
-        if prediction > 0.43:
-            st.session_state.classification_en = "Probably positive for malaria"
-            st.success(translations["positive_result"]["en"])
-            st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
+        if not is_valid_patient_id(patient_id_en):
+            st.error(translations["patient_id_error"]["en"])
         else:
-            st.session_state.classification_en = "Probably negative for malaria"
-            st.info(translations["negative_result"]["en"])
+            features = [1 if symptom in selected_symptoms_en else 0 for symptom in symptoms_en]
+            prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
+
+            st.session_state.prediction_en = float(prediction)
+            st.session_state.selected_symptoms_saved_en = selected_symptoms_en
+            st.session_state.other_symptoms_saved_en = other_symptoms_en
+            st.session_state.patient_id_saved_en = patient_id_en.strip()
+            st.session_state.location_saved_en = location_en
+
+            if prediction > 0.43:
+                st.session_state.classification_en = "Probably positive for malaria"
+                st.success(translations["positive_result"]["en"])
+                st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
+            else:
+                st.session_state.classification_en = "Probably negative for malaria"
+                st.info(translations["negative_result"]["en"])
 
     if "prediction_en" in st.session_state:
         if st.button(translations["save_button"]["en"], key="save_en"):
@@ -427,25 +427,25 @@ with tab_sw:
     ]
 
     if st.button(translations["button_results"]["sw"], key="predict_sw"):
-    if not is_valid_patient_id(patient_id_sw):
-        st.error(translations["patient_id_error"]["sw"])
-    else:
-        features = [1 if symptom in selected_symptoms_mapped else 0 for symptom in symptoms_en]
-        prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
-
-        st.session_state.prediction_sw = float(prediction)
-        st.session_state.selected_symptoms_saved_sw = selected_symptoms_sw
-        st.session_state.other_symptoms_saved_sw = other_symptoms_sw
-        st.session_state.patient_id_saved_sw = patient_id_sw.strip()
-        st.session_state.location_saved_sw = location_map_sw_to_en[location_sw]
-
-        if prediction > 0.24:
-            st.session_state.classification_sw = "Inawezekana una malaria"
-            st.success(translations["positive_result"]["sw"])
-            st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
+        if not is_valid_patient_id(patient_id_sw):
+            st.error(translations["patient_id_error"]["sw"])
         else:
-            st.session_state.classification_sw = "Inawezekana huna malaria"
-            st.info(translations["negative_result"]["sw"])
+            features = [1 if symptom in selected_symptoms_mapped else 0 for symptom in symptoms_en]
+            prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
+
+            st.session_state.prediction_sw = float(prediction)
+            st.session_state.selected_symptoms_saved_sw = selected_symptoms_sw
+            st.session_state.other_symptoms_saved_sw = other_symptoms_sw
+            st.session_state.patient_id_saved_sw = patient_id_sw.strip()
+            st.session_state.location_saved_sw = location_map_sw_to_en[location_sw]
+
+            if prediction > 0.43:
+                st.session_state.classification_sw = "Inawezekana una malaria"
+                st.success(translations["positive_result"]["sw"])
+                st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
+            else:
+                st.session_state.classification_sw = "Inawezekana huna malaria"
+                st.info(translations["negative_result"]["sw"])
 
     if "prediction_sw" in st.session_state:
         if st.button(translations["save_button"]["sw"], key="save_sw"):
