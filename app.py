@@ -194,6 +194,10 @@ Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa
         "en": "Response saved to database.",
         "sw": "Taarifa zimehifadhiwa kwenye kanzidata."
     },
+    "predictive_score_label": {
+    "en": "Malaria predictive score",
+    "sw": "Alama ya utabiri wa malaria"
+    },
 
     "save_button": {
         "en": "💾 Save Response",
@@ -346,7 +350,7 @@ with tab_en:
         else:
             features = [1 if symptom in selected_symptoms_en else 0 for symptom in symptoms_en]
             prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
-
+            st.write(f"**{translations['predictive_score_label']['en']}:** {prediction * 100:.1f}%")
             st.session_state.prediction_en = float(prediction)
             st.session_state.selected_symptoms_saved_en = selected_symptoms_en
             st.session_state.other_symptoms_saved_en = other_symptoms_en
@@ -432,7 +436,7 @@ with tab_sw:
         else:
             features = [1 if symptom in selected_symptoms_mapped else 0 for symptom in symptoms_en]
             prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
-
+            st.write(f"**{translations['predictive_score_label']['sw']}:** {prediction * 100:.1f}%")
             st.session_state.prediction_sw = float(prediction)
             st.session_state.selected_symptoms_saved_sw = selected_symptoms_sw
             st.session_state.other_symptoms_saved_sw = other_symptoms_sw
