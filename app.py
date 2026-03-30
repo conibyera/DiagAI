@@ -143,7 +143,7 @@ translations = {
     "save_success": {
         "en": "Response saved to database.",
         "sw": "Taarifa zimehifadhiwa kwenye kanzidata."
-    }
+    },
     "sidebar_content": {
         "en": """
 DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient history input.
