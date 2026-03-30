@@ -31,6 +31,10 @@ def check_login(username, password):
         return user_dict[username] == hash_password(password)
     return False
 
+#-----------A petient ID validator-------------
+def is_valid_patient_id(patient_id):
+    return bool(re.fullmatch(r"[A-Za-z0-9]+", patient_id.strip()))
+
 # ---------------- SESSION STATE ----------------
 defaults = {
     "logged_in": False,
@@ -48,6 +52,7 @@ for key, value in defaults.items():
 # ---------------- LOGIN PAGE ----------------
 if not st.session_state.logged_in:
     st.title("DiagAI Login")
+    st.caption("Please log in to continue.")
 
     with st.form("login_form", clear_on_submit=False):
         username = st.text_input("Username")
@@ -110,6 +115,35 @@ translations = {
         "en": "About This App",
         "sw": "Kuhusu Programu Hii"
     },
+    "patient_id_label": {
+    "en": "Patient ID",
+    "sw": "Namba ya Mgonjwa"
+    },
+
+    "patient_id_help": {
+        "en": "Enter an alphanumeric patient ID (required).",
+        "sw": "Weka namba ya mgonjwa yenye herufi na namba (inahitajika)."
+    },
+
+    "patient_id_error": {
+        "en": "Patient ID is required and must be alphanumeric.",
+        "sw": "Namba ya mgonjwa inahitajika na lazima iwe na herufi na namba pekee."
+    },
+
+    "location_label": {
+        "en": "Location",
+        "sw": "Mahali"
+    },
+
+    "location_options": {
+        "en": ["Rural", "Peri-Urban", "Urban"],
+        "sw": ["Vijijini", "Pembezoni mwa Mji", "Mjini"]
+    },
+
+    "save_success": {
+        "en": "Response saved to database.",
+        "sw": "Taarifa zimehifadhiwa kwenye kanzidata."
+    }
     "sidebar_content": {
         "en": """
 DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient history input.
@@ -140,6 +174,18 @@ Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa
     }
 }
 
+location_map_sw_to_en = {
+    "Vijijini": "Rural",
+    "Pembezoni mwa Mji": "Peri-Urban",
+    "Mjini": "Urban"
+}
+
+location_sw = st.selectbox(
+    translations["location_label"]["sw"],
+    translations["location_options"]["sw"],
+    key="location_sw"
+)
+
 # ---------------- HELPERS ----------------
 def get_wikipedia_summary(disease, num_sentences=5, lang="en"):
     wiki_wiki = wikipediaapi.Wikipedia(language=lang, user_agent="DiagAI/1.0")
@@ -168,11 +214,13 @@ def send_email(subject, body, receiver_email):
         st.error(f"Error sending email: {str(e)}")
         return False
 
-def submit_to_database(username, language, selected_symptoms, other_symptoms, prediction, classification):
+def submit_to_database(username, patient_id, location, language, selected_symptoms, other_symptoms, prediction, classification):
     url = "http://127.0.0.1:8000/submit"   # replace later with deployed API URL
 
     payload = {
         "username": username,
+        "patient_id": patient_id,
+        "location": location,
         "language": language,
         "selected_symptoms": selected_symptoms,
         "other_symptoms": other_symptoms,
@@ -200,7 +248,7 @@ def submit_to_database(username, language, selected_symptoms, other_symptoms, pr
     except Exception:
         st.warning("An unexpected error occurred while saving the response.")
         return False
-
+        
 # ---------------- SIDEBAR ----------------
 st.sidebar.write(f"Logged in as: **{st.session_state.username}**")
 sidebar_language = st.sidebar.radio(
@@ -231,10 +279,22 @@ tab_en, tab_sw = st.tabs(["English", "Kiswahili"])
 with tab_en:
     st.title(translations["title"]["en"])
 
+    patient_id_en = st.text_input(
+        translations["patient_id_label"]["en"],
+        help=translations["patient_id_help"]["en"],
+        key="patient_id_en"
+    )
+
+    location_en = st.selectbox(
+        translations["location_label"]["en"],
+        translations["location_options"]["en"],
+        key="location_en"
+    )
+
     selected_symptoms_en = st.multiselect(
-        "Select all history, symptoms or signs you have:",
+        translations["symptoms_prompt"]["en"],
         symptoms_en + ["Others"],
-        placeholder="Choose options:"
+        placeholder=translations["symptoms_placeholder"]["en"]
     )
 
     other_symptoms_en = ""
@@ -253,39 +313,45 @@ with tab_en:
             else:
                 st.warning(translations["send_email_warning"]["en"])
 
-    if st.button("🐜 Get Malaria Results", key="predict_en"):
-        features = [1 if symptom in selected_symptoms_en else 0 for symptom in symptoms_en]
-        prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
-
-        st.session_state.prediction_en = float(prediction)
-
-        if prediction > 0.43:
-            st.session_state.classification_en = "Probably positive for malaria"
+    if st.button(translations["button_results"]["en"], key="predict_en"):
+        if not is_valid_patient_id(patient_id_en):
+            st.error(translations["patient_id_error"]["en"])
         else:
-            st.session_state.classification_en = "Probably negative for malaria"
+            features = [1 if symptom in selected_symptoms_en else 0 for symptom in symptoms_en]
+            prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
 
-    # Show saved result if available
-    if st.session_state.prediction_en is not None:
-        if st.session_state.classification_en == "Probably positive for malaria":
-            st.success(st.session_state.classification_en)
-            st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
-        else:
-            st.info(st.session_state.classification_en)
+            st.session_state.prediction_en = float(prediction)
+            st.session_state.selected_symptoms_en = selected_symptoms_en
+            st.session_state.other_symptoms_en = other_symptoms_en
+            st.session_state.patient_id_en = patient_id_en.strip()
+            st.session_state.location_en = location_en
 
-        st.write(f"**Prediction Score:** {st.session_state.prediction_en:.3f}")
+            if prediction > 0.43:
+                st.session_state.classification_en = "Probably positive for malaria"
+                st.success(translations["positive_result"]["en"])
+                st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
+            else:
+                st.session_state.classification_en = "Probably negative for malaria"
+                st.info(translations["negative_result"]["en"])
 
+    if "prediction_en" in st.session_state:
         if st.button("💾 Save Response", key="save_en"):
-            saved = submit_to_database(
-                username=st.session_state.username,
-                language="English",
-                selected_symptoms=selected_symptoms_en,
-                other_symptoms=other_symptoms_en,
-                prediction=st.session_state.prediction_en,
-                classification=st.session_state.classification_en
-            )
+            if not is_valid_patient_id(st.session_state.patient_id_en):
+                st.error(translations["patient_id_error"]["en"])
+            else:
+                saved = submit_to_database(
+                    username=st.session_state.username,
+                    patient_id=st.session_state.patient_id_en,
+                    location=st.session_state.location_en,
+                    language="English",
+                    selected_symptoms=st.session_state.selected_symptoms_en,
+                    other_symptoms=st.session_state.other_symptoms_en,
+                    prediction=st.session_state.prediction_en,
+                    classification=st.session_state.classification_en
+                )
 
-            if saved:
-                st.success("Response saved to database.")
+                if saved:
+                    st.success(translations["save_success"]["en"])
 
 # =========================================================
 # SWAHILI TAB
@@ -293,10 +359,22 @@ with tab_en:
 with tab_sw:
     st.title(translations["title"]["sw"])
 
+    patient_id_sw = st.text_input(
+        translations["patient_id_label"]["sw"],
+        help=translations["patient_id_help"]["sw"],
+        key="patient_id_sw"
+    )
+
+    location_sw = st.selectbox(
+        translations["location_label"]["sw"],
+        translations["location_options"]["sw"],
+        key="location_sw"
+    )
+
     selected_symptoms_sw = st.multiselect(
-        "Chagua historia, dalili au ishara zote ulizonazo:",
+        translations["symptoms_prompt"]["sw"],
         symptoms_sw + ["Dalili Nyingine"],
-        placeholder="Chagua zinazokuhusu:"
+        placeholder=translations["symptoms_placeholder"]["sw"]
     )
 
     other_symptoms_sw = ""
@@ -321,36 +399,42 @@ with tab_sw:
         if symptom != "Dalili Nyingine"
     ]
 
-    if st.button("🐜 Matokeo ya Malaria", key="predict_sw"):
-        features = [1 if symptom in selected_symptoms_mapped else 0 for symptom in symptoms_en]
-        prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
-
-        st.session_state.prediction_sw = float(prediction)
-
-        if prediction > 0.43:
-            st.session_state.classification_sw = "Inawezekana una malaria"
+    if st.button(translations["button_results"]["sw"], key="predict_sw"):
+        if not is_valid_patient_id(patient_id_sw):
+            st.error(translations["patient_id_error"]["sw"])
         else:
-            st.session_state.classification_sw = "Inawezekana huna malaria"
+            features = [1 if symptom in selected_symptoms_mapped else 0 for symptom in symptoms_en]
+            prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
 
-    # Show saved result if available
-    if st.session_state.prediction_sw is not None:
-        if st.session_state.classification_sw == "Inawezekana una malaria":
-            st.success(st.session_state.classification_sw)
-            st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
-        else:
-            st.info(st.session_state.classification_sw)
+            st.session_state.prediction_sw = float(prediction)
+            st.session_state.selected_symptoms_sw = selected_symptoms_sw
+            st.session_state.other_symptoms_sw = other_symptoms_sw
+            st.session_state.patient_id_sw = patient_id_sw.strip()
+            st.session_state.location_sw = location_map_sw_to_en[location_sw]
 
-        st.write(f"**Alama ya Utabiri:** {st.session_state.prediction_sw:.3f}")
+            if prediction > 0.24:
+                st.session_state.classification_sw = "Inawezekana una malaria"
+                st.success(translations["positive_result"]["sw"])
+                st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
+            else:
+                st.session_state.classification_sw = "Inawezekana huna malaria"
+                st.info(translations["negative_result"]["sw"])
 
+    if "prediction_sw" in st.session_state:
         if st.button("💾 Hifadhi Taarifa", key="save_sw"):
-            saved = submit_to_database(
-                username=st.session_state.username,
-                language="Kiswahili",
-                selected_symptoms=selected_symptoms_sw,
-                other_symptoms=other_symptoms_sw,
-                prediction=st.session_state.prediction_sw,
-                classification=st.session_state.classification_sw
-            )
+            if not is_valid_patient_id(st.session_state.patient_id_sw):
+                st.error(translations["patient_id_error"]["sw"])
+            else:
+                saved = submit_to_database(
+                    username=st.session_state.username,
+                    patient_id=st.session_state.patient_id_sw,
+                    location=st.session_state.location_sw,
+                    language="Kiswahili",
+                    selected_symptoms=st.session_state.selected_symptoms_sw,
+                    other_symptoms=st.session_state.other_symptoms_sw,
+                    prediction=st.session_state.prediction_sw,
+                    classification=st.session_state.classification_sw
+                )
 
-            if saved:
-                st.success("Taarifa zimehifadhiwa kwenye kanzidata.")
+                if saved:
+                    st.success(translations["save_success"]["sw"])
