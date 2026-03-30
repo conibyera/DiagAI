@@ -13,25 +13,23 @@ from email.mime.multipart import MIMEMultipart
 st.set_page_config(page_title="DiagAI", layout="centered")
 
 # ---------------- AUTH ----------------
+def normalize_username(username):
+    return username.lower().strip()
+
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-def normalize_username(username):
-    return username.lower().strip()
-    
 def check_login(username, password):
     usernames = [normalize_username(u) for u in st.secrets["auth"]["usernames"]]
     password_hashes = st.secrets["auth"]["password_hashes"]
 
     user_dict = dict(zip(usernames, password_hashes))
-
     username = normalize_username(username)
 
     if username in user_dict:
         return user_dict[username] == hash_password(password)
     return False
 
-#-----------A petient ID validator-------------
 def is_valid_patient_id(patient_id):
     return bool(re.fullmatch(r"[A-Za-z0-9]+", patient_id.strip()))
 
@@ -50,6 +48,14 @@ for key, value in defaults.items():
         st.session_state[key] = value
 
 # ---------------- LOGIN PAGE ----------------
+# Session state
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+# Login page
 if not st.session_state.logged_in:
     st.title("DiagAI Login")
     st.caption("Please log in to continue.")
@@ -64,7 +70,7 @@ if not st.session_state.logged_in:
             st.warning("Please enter both username and password.")
         elif check_login(username, password):
             st.session_state.logged_in = True
-            st.session_state.username = username.lower().strip()
+            st.session_state.username = normalize_username(username)
             st.success("Login successful")
             st.rerun()
         else:
@@ -103,21 +109,80 @@ translations = {
         "en": "DiagAI/1.0 for Rapid Malaria Diagnosis",
         "sw": "DiagAI/1.0 kwa Uchunguzi wa Haraka wa Malaria"
     },
-    "send_email_button": {
-    "en": "📧 Submit Symptoms",
-    "sw": "📧 Tuma Dalili"
-    },
-    "send_email_warning": {
-        "en": "Please describe additional symptoms before sending.",
-        "sw": "Tafadhali eleza dalili zaidi kabla ya kutuma."
-    },
+
     "sidebar_header": {
         "en": "About This App",
         "sw": "Kuhusu Programu Hii"
     },
+
+    "sidebar_content": {
+        "en": """
+            DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient history input.
+            
+            This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms, signs, or patient history.
+            
+            **How to Use:**
+            1. Enter Patient ID and select location.
+            2. Select the symptoms, signs, or history from the dropdown menu.
+            3. Click the button to check the malaria result.
+            4. Optionally save the response to the database.
+    
+            *Please remember that this application is a rapid diagnostic tool and not a substitute for professional medical advice.*
+        """,
+
+        "sw": """
+            DiagAI ni programu ya mtandao iliyoundwa kwa uchunguzi wa haraka wa magonjwa kulingana na dalili, ishara, na historia ya mgonjwa.
+            
+            Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa kuzingatia historia, dalili na ishara zilizoainishwa na mgonjwa au mtabibu wake.
+            
+            **Maelekezo:**
+            1. Weka namba ya mgonjwa na uchague mahali.
+            2. Chagua dalili, ishara au historia kutoka kwenye menyu.
+            3. Bonyeza kitufe ili kuangalia matokeo ya malaria.
+            4. Unaweza kuhifadhi taarifa kwenye kanzidata.
+    
+            *Tafadhali kumbuka kuwa hii programu imeandaliwa kwa ajili ya uchunguzi wa haraka wa malaria na si mbadala wa ushauri wa kitaalamu wa matibabu.*
+        """
+    },
+
+    "symptoms_prompt": {
+        "en": "Select all history, symptoms or signs you have:",
+        "sw": "Chagua historia, dalili au ishara zote ulizonazo:"
+    },
+
+    "symptoms_placeholder": {
+        "en": "Choose options:",
+        "sw": "Chagua zinazokuhusu:"
+    },
+
+    "button_results": {
+        "en": "🐜 Malaria Results",
+        "sw": "🐜 Matokeo ya Malaria"
+    },
+
+    "positive_result": {
+        "en": "Probably positive for malaria",
+        "sw": "Inawezekana una malaria"
+    },
+
+    "negative_result": {
+        "en": "Probably negative for malaria",
+        "sw": "Inawezekana huna malaria"
+    },
+
+    "send_email_button": {
+        "en": "📧 Submit Symptoms",
+        "sw": "📧 Tuma Dalili"
+    },
+
+    "send_email_warning": {
+        "en": "Please describe additional symptoms before sending.",
+        "sw": "Tafadhali eleza dalili zaidi kabla ya kutuma."
+    },
+
     "patient_id_label": {
-    "en": "Patient ID",
-    "sw": "Namba ya Mgonjwa"
+        "en": "Patient ID",
+        "sw": "Namba ya Mgonjwa"
     },
 
     "patient_id_help": {
@@ -144,33 +209,10 @@ translations = {
         "en": "Response saved to database.",
         "sw": "Taarifa zimehifadhiwa kwenye kanzidata."
     },
-    "sidebar_content": {
-        "en": """
-DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient history input.
 
-This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms, signs, or patient history.
-
-**How to Use:**
-1. Select the symptoms and signs you are experiencing or history from the dropdown menu.
-2. Click **Get Malaria Results**.
-3. Review the prediction.
-4. Optionally save the response to the database.
-
-*This application is a rapid screening tool and not a substitute for professional medical advice.*
-""",
-        "sw": """
-DiagAI ni programu ya mtandao iliyoundwa kwa uchunguzi wa haraka wa magonjwa kulingana na dalili, ishara, na historia ya mgonjwa.
-
-Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa kuzingatia historia, dalili na ishara zilizoainishwa na mgonjwa au mtabibu wake.
-
-**Maelekezo:**
-1. Chagua dalili, ishara au historia kuhusiana na ugonjwa wako kutoka kwenye menyu.
-2. Bonyeza **Matokeo ya Malaria**.
-3. Angalia matokeo.
-4. Unaweza kuhifadhi taarifa kwenye kanzidata.
-
-*Programu hii ni chombo cha uchunguzi wa haraka na si mbadala wa ushauri wa kitaalamu wa matibabu.*
-"""
+    "save_button": {
+        "en": "💾 Save Response",
+        "sw": "💾 Hifadhi Taarifa"
     }
 }
 
@@ -234,7 +276,7 @@ def submit_to_database(username, patient_id, location, language, selected_sympto
         if response.status_code == 200:
             return True
         else:
-            st.warning("Response could not be saved at this time.")
+            st.warning(f"Submission failed: {response.text}")
             return False
 
     except requests.exceptions.ConnectionError:
@@ -245,12 +287,13 @@ def submit_to_database(username, patient_id, location, language, selected_sympto
         st.warning("Database server did not respond in time.")
         return False
 
-    except Exception:
-        st.warning("An unexpected error occurred while saving the response.")
+    except Exception as e:
+        st.warning(f"Unexpected error while saving: {str(e)}")
         return False
         
 # ---------------- SIDEBAR ----------------
-st.sidebar.write(f"Logged in as: **{st.session_state.username}**")
+st.sidebar.write(f"**Logged in as:** {st.session_state.username}")
+
 sidebar_language = st.sidebar.radio(
     "🌐 Language / Lugha",
     ["en", "sw"],
@@ -266,10 +309,9 @@ else:
     st.sidebar.write(translations["sidebar_content"]["sw"])
 
 if st.sidebar.button("Logout"):
-    for key in defaults:
-        st.session_state[key] = defaults[key]
+    st.session_state.logged_in = False
+    st.session_state.username = ""
     st.rerun()
-
 # ---------------- TABS ----------------
 tab_en, tab_sw = st.tabs(["English", "Kiswahili"])
 
@@ -300,7 +342,10 @@ with tab_en:
     other_symptoms_en = ""
 
     if "Others" in selected_symptoms_en:
-        other_symptoms_en = st.text_area("Please list any other symptoms or signs you have:")
+        other_symptoms_en = st.text_area(
+            "Please list any other symptoms or signs you have:",
+            key="other_symptoms_en"
+        )
 
         if st.button(translations["send_email_button"]["en"], key="send_email_en"):
             if other_symptoms_en.strip():
@@ -335,7 +380,7 @@ with tab_en:
                 st.info(translations["negative_result"]["en"])
 
     if "prediction_en" in st.session_state:
-        if st.button("💾 Save Response", key="save_en"):
+        if st.button(translations["save_button"]["en"], key="save_en"):
             if not is_valid_patient_id(st.session_state.patient_id_en):
                 st.error(translations["patient_id_error"]["en"])
             else:
@@ -380,7 +425,10 @@ with tab_sw:
     other_symptoms_sw = ""
 
     if "Dalili Nyingine" in selected_symptoms_sw:
-        other_symptoms_sw = st.text_area("Andika dalili nyingine unazopata")
+        other_symptoms_sw = st.text_area(
+            "Andika dalili nyingine unazopata",
+            key="other_symptoms_sw"
+        )
 
         if st.button(translations["send_email_button"]["sw"], key="send_email_sw"):
             if other_symptoms_sw.strip():
@@ -421,7 +469,7 @@ with tab_sw:
                 st.info(translations["negative_result"]["sw"])
 
     if "prediction_sw" in st.session_state:
-        if st.button("💾 Hifadhi Taarifa", key="save_sw"):
+        if st.button(translations["save_button"]["sw"], key="save_sw"):
             if not is_valid_patient_id(st.session_state.patient_id_sw):
                 st.error(translations["patient_id_error"]["sw"])
             else:
