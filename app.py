@@ -301,7 +301,7 @@ if st.sidebar.button("Logout"):
     st.rerun()
 
 # ---------------- MAIN TABS ----------------
-tab_en, tab_sw = st.tabs(["English", "Kiswahili"])
+tab_en, tab_sw, tab_lab = st.tabs(["English", "Kiswahili", "Lab Confirmation"])
 
 # ================= ENGLISH TAB =================
 with tab_en:
@@ -469,3 +469,110 @@ with tab_sw:
 
                 if saved:
                     st.success(translations["save_success"]["sw"])
+
+def search_patient_records(patient_id):
+    url = f"http://127.0.0.1:8000/search_by_patient_id/{patient_id}"
+
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            return response.json().get("results", [])
+        else:
+            st.error(f"Search failed: {response.text}")
+            return []
+    except Exception as e:
+        st.error(f"Error searching patient records: {str(e)}")
+        return []
+
+def update_lab_result(record_id, lab_result, lab_test_type, confirmed_by):
+    url = "http://127.0.0.1:8000/update_lab_result"
+
+    payload = {
+        "record_id": record_id,
+        "lab_result": lab_result,
+        "lab_test_type": lab_test_type,
+        "confirmed_by": confirmed_by
+    }
+
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        if response.status_code == 200:
+            return True
+        else:
+            st.error(f"Update failed: {response.text}")
+            return False
+    except Exception as e:
+        st.error(f"Error updating lab result: {str(e)}")
+        return False
+
+# ================= LAB CONFIRMATION TAB =================
+with tab_lab:
+    st.title("Lab Confirmation")
+
+    st.write("Search for a patient record and update the laboratory confirmation result.")
+
+    patient_search_id = st.text_input(
+        "Enter Patient ID to search",
+        key="lab_patient_search"
+    )
+
+    if st.button("Search Records", key="search_records_btn"):
+        if not patient_search_id.strip():
+            st.warning("Please enter a Patient ID.")
+        elif not is_valid_patient_id(patient_search_id):
+            st.warning("Patient ID must be alphanumeric.")
+        else:
+            records = search_patient_records(patient_search_id.strip())
+            st.session_state.lab_search_results = records
+
+    if "lab_search_results" in st.session_state and st.session_state.lab_search_results:
+        records = st.session_state.lab_search_results
+
+        record_options = {
+            f"Record ID {r['id']} | {r['timestamp']} | Score: {r['prediction']:.3f} | {r['classification']}": r
+            for r in records
+        }
+
+        selected_label = st.selectbox(
+            "Select a record to update",
+            list(record_options.keys()),
+            key="record_select_lab"
+        )
+
+        selected_record = record_options[selected_label]
+
+        st.markdown("### Selected Record")
+        st.write(f"**Record ID:** {selected_record['id']}")
+        st.write(f"**Patient ID:** {selected_record['patient_id']}")
+        st.write(f"**Timestamp:** {selected_record['timestamp']}")
+        st.write(f"**Prediction Score:** {selected_record['prediction']:.3f}")
+        st.write(f"**Classification:** {selected_record['classification']}")
+        st.write(f"**Symptoms:** {', '.join(selected_record['selected_symptoms']) if selected_record['selected_symptoms'] else 'None'}")
+        st.write(f"**Other Symptoms:** {selected_record['other_symptoms'] if selected_record['other_symptoms'] else 'None'}")
+        st.write(f"**Existing Lab Result:** {selected_record['lab_result'] if selected_record['lab_result'] else 'Not yet entered'}")
+        st.write(f"**Existing Test Type:** {selected_record['lab_test_type'] if selected_record['lab_test_type'] else 'Not yet entered'}")
+
+        st.markdown("### Enter Lab Confirmation")
+
+        lab_result = st.selectbox(
+            "Lab Result",
+            ["Positive", "Negative", "Pending"],
+            key="lab_result_input"
+        )
+
+        lab_test_type = st.selectbox(
+            "Test Type",
+            ["Microscopy", "RDT", "PCR", "Clinical only"],
+            key="lab_test_type_input"
+        )
+
+        if st.button("Save Lab Confirmation", key="save_lab_confirmation"):
+            saved = update_lab_result(
+                record_id=selected_record["id"],
+                lab_result=lab_result,
+                lab_test_type=lab_test_type,
+                confirmed_by=st.session_state.username
+            )
+
+            if saved:
+                st.success("Lab confirmation updated successfully.")
