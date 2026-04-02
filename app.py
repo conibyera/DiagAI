@@ -475,35 +475,24 @@ def search_patient_records(patient_id):
 
     try:
         response = requests.get(url, timeout=10)
+
         if response.status_code == 200:
             return response.json().get("results", [])
         else:
-            st.error(f"Search failed: {response.text}")
+            st.warning(f"Search failed: {response.text}")
             return []
-    except Exception as e:
-        st.error(f"Error searching patient records: {str(e)}")
+
+    except requests.exceptions.ConnectionError:
+        st.info("Database saving is not yet active in the cloud version of this app.")
         return []
 
-def update_lab_result(record_id, lab_result, lab_test_type, confirmed_by):
-    url = "http://127.0.0.1:8000/update_lab_result"
+    except requests.exceptions.Timeout:
+        st.warning("Database server did not respond in time.")
+        return []
 
-    payload = {
-        "record_id": record_id,
-        "lab_result": lab_result,
-        "lab_test_type": lab_test_type,
-        "confirmed_by": confirmed_by
-    }
-
-    try:
-        response = requests.post(url, json=payload, timeout=10)
-        if response.status_code == 200:
-            return True
-        else:
-            st.error(f"Update failed: {response.text}")
-            return False
     except Exception as e:
-        st.error(f"Error updating lab result: {str(e)}")
-        return False
+        st.warning(f"Unexpected error while searching: {str(e)}")
+        return []
 
 # ================= LAB CONFIRMATION TAB =================
 with tab_lab:
