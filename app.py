@@ -9,6 +9,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+API_BASE_URL = "http://127.0.0.1:8000"
+
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="DiagAI", page_icon="🩺", layout="centered")
 
@@ -243,8 +245,36 @@ def send_email(subject, body, receiver_email):
         return False
 
 # ---------------- API SUBMISSION ----------------
+def safe_api_request(method, url, payload=None, connection_message="This feature is not yet active in the cloud version of this app."):
+    try:
+        if method.upper() == "POST":
+            response = requests.post(url, json=payload, timeout=10)
+        elif method.upper() == "GET":
+            response = requests.get(url, timeout=10)
+        else:
+            st.warning("Unsupported API request method.")
+            return None
+
+        if response.status_code == 200:
+            return response
+        else:
+            st.warning(f"Request failed: {response.text}")
+            return None
+
+    except requests.exceptions.ConnectionError:
+        st.info(connection_message)
+        return None
+
+    except requests.exceptions.Timeout:
+        st.warning("Database server did not respond in time.")
+        return None
+
+    except Exception as e:
+        st.warning(f"Unexpected error: {str(e)}")
+        return None
+
 def submit_to_database(username, patient_id, location, language, selected_symptoms, other_symptoms, prediction, classification):
-    url = "http://127.0.0.1:8000/submit"  # replace later with deployed API URL
+    url = f"{API_BASE_URL}/submit"
 
     payload = {
         "username": username,
@@ -257,26 +287,14 @@ def submit_to_database(username, patient_id, location, language, selected_sympto
         "classification": classification
     }
 
-    try:
-        response = requests.post(url, json=payload, timeout=10)
+    response = safe_api_request(
+        method="POST",
+        url=url,
+        payload=payload,
+        connection_message="Database saving is not yet active in the cloud version of this app."
+    )
 
-        if response.status_code == 200:
-            return True
-        else:
-            st.warning(f"Submission failed: {response.text}")
-            return False
-
-    except requests.exceptions.ConnectionError:
-        st.info("Database saving is not yet active in the cloud version of this app.")
-        return False
-
-    except requests.exceptions.Timeout:
-        st.warning("Database server did not respond in time.")
-        return False
-
-    except Exception as e:
-        st.warning(f"Unexpected error while saving: {str(e)}")
-        return False
+    return response is not None
 
 # ---------------- SIDEBAR ----------------
 st.sidebar.write(f"**Logged in as:** {st.session_state.username}")
@@ -471,31 +489,21 @@ with tab_sw:
                     st.success(translations["save_success"]["sw"])
 
 def search_patient_records(patient_id):
-    url = f"http://127.0.0.1:8000/search_by_patient_id/{patient_id}"
+    url = f"{API_BASE_URL}/search_by_patient_id/{patient_id}"
 
-    try:
-        response = requests.get(url, timeout=10)
+    response = safe_api_request(
+        method="GET",
+        url=url,
+        connection_message="Record search is not yet active in the cloud version of this app."
+    )
 
-        if response.status_code == 200:
-            return response.json().get("results", [])
-        else:
-            st.warning(f"Search failed: {response.text}")
-            return []
+    if response is not None:
+        return response.json().get("results", [])
 
-    except requests.exceptions.ConnectionError:
-        st.info("Record searching is not yet active in the cloud version of this app.")
-        return []
-
-    except requests.exceptions.Timeout:
-        st.warning("Database server did not respond in time.")
-        return []
-
-    except Exception as e:
-        st.warning(f"Unexpected error while searching: {str(e)}")
-        return []
+    return []
 
 def update_lab_result(record_id, lab_result, lab_test_type, confirmed_by):
-    url = "http://127.0.0.1:8000/update_lab_result"
+    url = f"{API_BASE_URL}/update_lab_result"
 
     payload = {
         "record_id": record_id,
@@ -504,26 +512,14 @@ def update_lab_result(record_id, lab_result, lab_test_type, confirmed_by):
         "confirmed_by": confirmed_by
     }
 
-    try:
-        response = requests.post(url, json=payload, timeout=10)
+    response = safe_api_request(
+        method="POST",
+        url=url,
+        payload=payload,
+        connection_message="Lab confirmation update is not yet active in the cloud version of this app."
+    )
 
-        if response.status_code == 200:
-            return True
-        else:
-            st.warning(f"Update failed: {response.text}")
-            return False
-
-    except requests.exceptions.ConnectionError:
-        st.info("Lab confirmation update is not yet active in the cloud version of this app.")
-        return False
-
-    except requests.exceptions.Timeout:
-        st.warning("Database server did not respond in time.")
-        return False
-
-    except Exception as e:
-        st.warning(f"Unexpected error while updating lab result: {str(e)}")
-        return False
+    return response is not None
 
 # ================= LAB CONFIRMATION TAB =================
 with tab_lab:
