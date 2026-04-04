@@ -377,6 +377,29 @@ def get_export_csv():
         st.info("CSV export is not yet active in the cloud version of this app.")
         return None
 
+def admin_search_records(patient_id):
+    url = f"{API_BASE_URL}/search_by_patient_id/{patient_id}"
+
+    try:
+        response = requests.get(
+            url,
+            params={"role": st.session_state.role},
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 403:
+            st.warning("You are not authorized to search records.")
+            return []
+        else:
+            st.warning(f"Search failed: {response.text}")
+            return []
+
+    except Exception:
+        st.info("Record search is not yet active in the cloud version of this app.")
+        return []
+
 def search_patient_records(patient_id):
     url = f"{API_BASE_URL}/search_by_patient_id/{patient_id}"
 
@@ -444,7 +467,7 @@ elif st.session_state.role == "lab":
      st.sidebar.header(translations["lab_sidebar_header"][sidebar_lang])
      st.sidebar.write(translations["lab_sidebar_content"][sidebar_lang])
 
-# ================= ADMIN EXPORT =================
+# ================= ADMIN TOOLS =================
 if st.session_state.role == "admin":
     st.sidebar.markdown("---")
     st.sidebar.subheader("Admin Tools")
@@ -473,16 +496,30 @@ if st.sidebar.button("Logout"):
 # ---------------- MAIN TABS ----------------
 allowed_diag = st.session_state.role in ["admin", "clinician"]
 allowed_lab = st.session_state.role in ["admin", "lab"]
+allowed_admin = st.session_state.role == "admin"
 
-if allowed_diag and allowed_lab:
-    tab_en, tab_sw, tab_lab = st.tabs(["English", "Kiswahili", "Lab Confirmation"])
+if allowed_diag and allowed_lab and allowed_admin:
+    tab_en, tab_sw, tab_lab, tab_admin = st.tabs(
+        ["English", "Kiswahili", "Lab Confirmation", "Admin Dashboard"]
+    )
+elif allowed_diag and allowed_admin:
+    tab_en, tab_sw, tab_admin = st.tabs(
+        ["English", "Kiswahili", "Admin Dashboard"]
+    )
+    tab_lab = None
 elif allowed_diag:
     tab_en, tab_sw = st.tabs(["English", "Kiswahili"])
     tab_lab = None
+    tab_admin = None
+elif allowed_lab and allowed_admin:
+    tab_lab, tab_admin = st.tabs(["Lab Confirmation", "Admin Dashboard"])
+    tab_en = None
+    tab_sw = None
 elif allowed_lab:
     tab_lab, = st.tabs(["Lab Confirmation"])
     tab_en = None
     tab_sw = None
+    tab_admin = None
 else:
     st.error("You do not have access to any part of this app.")
     st.stop()
@@ -743,3 +780,56 @@ if tab_lab is not None:
 
                 if saved:
                     st.success("Lab confirmation updated successfully.")
+
+# ================= ADMIN DASHBOARD TAB =================
+if "tab_admin" in locals() and tab_admin is not None:
+    with tab_admin:
+        st.title("Admin Dashboard")
+
+        if st.session_state.role != "admin":
+            st.warning("You are not authorized to access the Admin Dashboard.")
+            st.stop()
+
+        st.write("Search and preview patient records.")
+
+        admin_patient_search = st.text_input(
+            "Enter Patient ID to search",
+            key="admin_patient_search_main"
+        )
+
+        if st.button("Search Patient Records", key="admin_search_records_main"):
+            if not admin_patient_search.strip():
+                st.warning("Please enter a Patient ID.")
+            elif not is_valid_patient_id(admin_patient_search):
+                st.warning("Patient ID must be alphanumeric.")
+            else:
+                st.session_state.admin_search_results = admin_search_records(admin_patient_search.strip())
+
+        if "admin_search_results" in st.session_state:
+            records = st.session_state.admin_search_results
+
+            if not records:
+                st.info("No records found.")
+            else:
+                st.success(f"{len(records)} record(s) found.")
+
+                for r in records:
+                    with st.expander(
+                        f"Record ID {r['id']} | {r['timestamp']} | {r['classification']}",
+                        expanded=False
+                    ):
+                        st.write(f"**Patient ID:** {r.get('patient_id', '')}")
+                        st.write(f"**Username:** {r.get('username', '')}")
+                        st.write(f"**Language:** {r.get('language', '')}")
+                        st.write(f"**Location:** {r.get('location', '')}")
+                        st.write(f"**Prediction Score:** {r.get('prediction', 0):.3f}")
+                        st.write(f"**Classification:** {r.get('classification', '')}")
+
+                        symptoms = r.get("selected_symptoms", [])
+                        st.write(f"**Symptoms:** {', '.join(symptoms) if symptoms else 'None'}")
+
+                        st.write(f"**Other Symptoms:** {r.get('other_symptoms') or 'None'}")
+                        st.write(f"**Lab Result:** {r.get('lab_result') or 'Not entered'}")
+                        st.write(f"**Lab Test Type:** {r.get('lab_test_type') or 'Not entered'}")
+                        st.write(f"**Confirmed By:** {r.get('confirmed_by') or 'Not entered'}")
+                        st.write(f"**Timestamp:** {r.get('timestamp', '')}")
