@@ -319,7 +319,7 @@ def safe_api_request(method, url, payload=None, connection_message="This feature
     except Exception as e:
         st.warning(f"Unexpected error: {str(e)}")
         return None
-f"{API_BASE_URL}/submit"
+
 def submit_to_database(username, role, patient_id, location, language, selected_symptoms, other_symptoms, prediction, classification):
     url = f"{API_BASE_URL}/submit"
 
