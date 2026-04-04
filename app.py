@@ -349,6 +349,29 @@ def submit_to_database(username, role, patient_id, location, language, selected_
         st.info("Database saving is not yet active in the cloud version of this app.")
         return False
 
+def get_export_csv():
+    url = f"{API_BASE_URL}/export_csv"
+
+    try:
+        response = requests.get(
+            url,
+            params={"role": st.session_state.role},
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            return response.content
+        elif response.status_code == 403:
+            st.warning("You are not authorized to export the dataset.")
+            return None
+        else:
+            st.error(f"CSV export failed: {response.text}")
+            return None
+
+    except Exception:
+        st.info("CSV export is not yet active in the cloud version of this app.")
+        return None
+
 # ---------------- SIDEBAR ----------------
 st.sidebar.write(f"**Logged in as:** {st.session_state.username}")
 st.sidebar.write(f"Role: **{st.session_state.role}**")
@@ -637,29 +660,6 @@ def update_lab_result(record_id, lab_result, lab_test_type, confirmed_by):
     except Exception:
         st.info("Lab confirmation saving is not yet active in the cloud version of this app.")
         return False
-
-def get_export_csv():
-    url = f"{API_BASE_URL}/export_csv"
-
-    try:
-        response = requests.get(
-            url,
-            params={"role": st.session_state.role},
-            timeout=10
-        )
-
-        if response.status_code == 200:
-            return response.content
-        elif response.status_code == 403:
-            st.warning("You are not authorized to export the dataset.")
-            return None
-        else:
-            st.error(f"CSV export failed: {response.text}")
-            return None
-
-    except Exception:
-        st.info("CSV export is not yet active in the cloud version of this app.")
-        return None
 
 # ================= LAB CONFIRMATION TAB =================
 if tab_lab is not None:
