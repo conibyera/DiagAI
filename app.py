@@ -335,18 +335,23 @@ def submit_to_database(username, role, patient_id, location, language, selected_
         "classification": classification
     }
 
-    try:
-        response = requests.post(url, json=payload)
-        if response.status_code == 200:
-            return True
-        elif response.status_code == 403:
-            st.warning("Database saving is not authorized for your account.")
-            return False
-        else:
-            st.error(f"Submission failed: {response.text}")
-            return False
-    except Exception:
-        st.info("Database saving is not yet active in the cloud version of this app.")
+    response = safe_api_request(
+        method="POST",
+        url=url,
+        payload=payload,
+        connection_message="Database saving is not yet active in the cloud version of this app."
+    )
+
+    if response is None:
+        return False
+
+    if response.status_code == 200:
+        return True
+    elif response.status_code == 403:
+        st.warning("Database saving is not authorized for your account.")
+        return False
+    else:
+        st.warning(f"Submission failed: {response.text}")
         return False
 
 def get_export_csv():
@@ -372,6 +377,51 @@ def get_export_csv():
         st.info("CSV export is not yet active in the cloud version of this app.")
         return None
 
+def search_patient_records(patient_id):
+    url = f"{API_BASE_URL}/search_by_patient_id/{patient_id}"
+
+    try:
+        response = requests.get(url, params={"role": st.session_state.role})
+
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 403:
+            st.warning("You are not authorized to search patient records.")
+            return []
+        else:
+            st.error(f"Search failed: {response.text}")
+            return []
+    except Exception:
+        st.info("Database search is not yet active in the cloud version of this app.")
+        return []
+        
+
+def update_lab_result(record_id, lab_result, lab_test_type, confirmed_by):
+    url = f"{API_BASE_URL}/update_lab_result"
+
+    payload = {
+        "role": st.session_state.role,
+        "record_id": record_id,
+        "lab_result": lab_result,
+        "lab_test_type": lab_test_type,
+        "confirmed_by": confirmed_by
+    }
+
+    try:
+        response = requests.post(url, json=payload)
+
+        if response.status_code == 200:
+            return True
+        elif response.status_code == 403:
+            st.warning("You are not authorized to update lab results.")
+            return False
+        else:
+            st.error(f"Update failed: {response.text}")
+            return False
+    except Exception:
+        st.info("Lab confirmation saving is not yet active in the cloud version of this app.")
+        return False
+
 # ---------------- SIDEBAR ----------------
 st.sidebar.write(f"**Logged in as:** {st.session_state.username}")
 st.sidebar.write(f"Role: **{st.session_state.role}**")
@@ -383,7 +433,7 @@ sidebar_language = st.sidebar.radio(
     index=0
 )
 
-sidebar_lang = "en" if sidebar_language == "English" else "sw"
+sidebar_lang = sidebar_language
 
 # Role-based sidebar content
 if st.session_state.role in ["admin", "clinician"]:
@@ -510,15 +560,15 @@ if tab_en is not None:
                     st.error(translations["patient_id_error"]["en"])
                 else:
                     saved = submit_to_database(
-                    username=st.session_state.username,
-                    role=st.session_state.role,
-                    patient_id=st.session_state.patient_id_en,
-                    location=st.session_state.location_en_code,
-                    language="English",
-                    selected_symptoms=selected_symptoms,
-                    other_symptoms=other_text,
-                    prediction=prediction,
-                    classification=classification
+                        username=st.session_state.username,
+                        role=st.session_state.role,
+                        patient_id=st.session_state.patient_id_saved_en,
+                        location=st.session_state.location_saved_en,
+                        language="English",
+                        selected_symptoms=st.session_state.selected_symptoms_saved_en,
+                        other_symptoms=st.session_state.other_symptoms_saved_en,
+                        prediction=st.session_state.prediction_en,
+                        classification=st.session_state.classification_en
                     )
 
                     if saved:
@@ -602,64 +652,19 @@ if tab_sw is not None:
                     st.error(translations["patient_id_error"]["sw"])
                 else:
                     saved = submit_to_database(
-                    username=st.session_state.username,
-                    role=st.session_state.role,
-                    patient_id=st.session_state.patient_id_sw,
-                    location=st.session_state.location_sw_code,
-                    language="Kiswahili",
-                    selected_symptoms=selected_symptoms_sw,
-                    other_symptoms=other_text,
-                    prediction=prediction,
-                    classification=classification
+                        username=st.session_state.username,
+                        role=st.session_state.role,
+                        patient_id=st.session_state.patient_id_saved_sw,
+                        location=st.session_state.location_saved_sw,
+                        language="Kiswahili",
+                        selected_symptoms=st.session_state.selected_symptoms_saved_sw,
+                        other_symptoms=st.session_state.other_symptoms_saved_sw,
+                        prediction=st.session_state.prediction_sw,
+                        classification=st.session_state.classification_sw
                     )
 
                     if saved:
                         st.success(translations["save_success"]["sw"])
-
-def search_patient_records(patient_id):
-    url = f"{API_BASE_URL}/search_by_patient_id/{patient_id}"
-
-    try:
-        response = requests.get(url, params={"role": st.session_state.role})
-
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 403:
-            st.warning("You are not authorized to search patient records.")
-            return []
-        else:
-            st.error(f"Search failed: {response.text}")
-            return []
-    except Exception:
-        st.info("Database search is not yet active in the cloud version of this app.")
-        return []
-        
-
-def update_lab_result(record_id, lab_result, lab_test_type, confirmed_by):
-    url = f"{API_BASE_URL}/update_lab_result"
-
-    payload = {
-        "role": st.session_state.role,
-        "record_id": record_id,
-        "lab_result": lab_result,
-        "lab_test_type": lab_test_type,
-        "confirmed_by": confirmed_by
-    }
-
-    try:
-        response = requests.post(url, json=payload)
-
-        if response.status_code == 200:
-            return True
-        elif response.status_code == 403:
-            st.warning("You are not authorized to update lab results.")
-            return False
-        else:
-            st.error(f"Update failed: {response.text}")
-            return False
-    except Exception:
-        st.info("Lab confirmation saving is not yet active in the cloud version of this app.")
-        return False
 
 # ================= LAB CONFIRMATION TAB =================
 if tab_lab is not None:
