@@ -24,13 +24,23 @@ def hash_password(password):
 def check_login(username, password):
     usernames = [normalize_username(u) for u in st.secrets["auth"]["usernames"]]
     password_hashes = st.secrets["auth"]["password_hashes"]
+    roles = st.secrets["auth"]["roles"]
 
-    user_dict = dict(zip(usernames, password_hashes))
+    user_dict = {
+        usernames[i]: {
+            "password_hash": password_hashes[i],
+            "role": roles[i]
+        }
+        for i in range(len(usernames))
+    }
+
     username = normalize_username(username)
 
     if username in user_dict:
-        return user_dict[username] == hash_password(password)
-    return False
+        if user_dict[username]["password_hash"] == hash_password(password):
+            return True, user_dict[username]["role"]
+
+    return False, None
 
 def is_valid_patient_id(patient_id):
     return bool(re.fullmatch(r"[A-Za-z0-9]+", patient_id.strip()))
@@ -41,6 +51,9 @@ if "logged_in" not in st.session_state:
 
 if "username" not in st.session_state:
     st.session_state.username = ""
+    
+if "role" not in st.session_state:
+    st.session_state.role = None
 
 # ---------------- LOGIN ----------------
 if not st.session_state.logged_in:
@@ -53,11 +66,15 @@ if not st.session_state.logged_in:
         login_submitted = st.form_submit_button("Login")
 
     if login_submitted:
-        if not username.strip() or not password.strip():
-            st.warning("Please enter both username and password.")
-        elif check_login(username, password):
+    if not username.strip() or not password.strip():
+        st.warning("Please enter both username and password.")
+    else:
+        login_success, role = check_login(username, password)
+
+        if login_success:
             st.session_state.logged_in = True
             st.session_state.username = normalize_username(username)
+            st.session_state.role = role
             st.success("Login successful")
             st.rerun()
         else:
@@ -204,6 +221,36 @@ Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa
     "save_button": {
         "en": "💾 Save Response",
         "sw": "💾 Hifadhi Taarifa"
+    },
+    
+    "lab_sidebar_header": {
+    "en": "Lab Confirmation",
+    "sw": "Uthibitisho wa Maabara"
+    },
+    
+    "lab_sidebar_content": {
+    "en": """
+        This section is for laboratory confirmation of previously submitted patient records.
+
+        **How to Use:**
+        1. Enter the Patient ID to search saved records.
+        2. Select the correct visit/record.
+        3. Enter the laboratory result and test type.
+        4. Save the lab confirmation.
+
+        *Only authorized laboratory personnel should use this section.*
+    """,
+    "sw": """
+        Sehemu hii ni kwa ajili ya kuthibitisha matokeo ya maabara kwa kumbukumbu za wagonjwa zilizohifadhiwa.
+
+        **Jinsi ya Kutumia:**
+        1. Weka Patient ID kutafuta kumbukumbu zilizohifadhiwa.
+        2. Chagua rekodi sahihi ya mgonjwa.
+        3. Weka matokeo ya maabara na aina ya kipimo.
+        4. Hifadhi uthibitisho wa maabara.
+
+        *Sehemu hii inapaswa kutumiwa na wahusika wa maabara walioidhinishwa pekee.*
+    """
     }
 }
 
@@ -272,12 +319,13 @@ def safe_api_request(method, url, payload=None, connection_message="This feature
     except Exception as e:
         st.warning(f"Unexpected error: {str(e)}")
         return None
-
-def submit_to_database(username, patient_id, location, language, selected_symptoms, other_symptoms, prediction, classification):
+f"{API_BASE_URL}/submit"
+def submit_to_database(username, role, patient_id, location, language, selected_symptoms, other_symptoms, prediction, classification):
     url = f"{API_BASE_URL}/submit"
 
     payload = {
         "username": username,
+        "role": role,
         "patient_id": patient_id,
         "location": location,
         "language": language,
@@ -287,17 +335,23 @@ def submit_to_database(username, patient_id, location, language, selected_sympto
         "classification": classification
     }
 
-    response = safe_api_request(
-        method="POST",
-        url=url,
-        payload=payload,
-        connection_message="Database saving is not yet active in the cloud version of this app."
-    )
-
-    return response is not None
+    try:
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            return True
+        elif response.status_code == 403:
+            st.warning("Database saving is not authorized for your account.")
+            return False
+        else:
+            st.error(f"Submission failed: {response.text}")
+            return False
+    except Exception:
+        st.info("Database saving is not yet active in the cloud version of this app.")
+        return False
 
 # ---------------- SIDEBAR ----------------
 st.sidebar.write(f"**Logged in as:** {st.session_state.username}")
+st.sidebar.write(f"Role: **{st.session_state.role}**")
 
 sidebar_language = st.sidebar.radio(
     "🌐 Language / Lugha",
@@ -306,289 +360,381 @@ sidebar_language = st.sidebar.radio(
     index=0
 )
 
-if sidebar_language == "en":
-    st.sidebar.header(translations["sidebar_header"]["en"])
-    st.sidebar.write(translations["sidebar_content"]["en"])
-else:
-    st.sidebar.header(translations["sidebar_header"]["sw"])
-    st.sidebar.write(translations["sidebar_content"]["sw"])
+sidebar_lang = "en" if sidebar_language == "English" else "sw"
 
+# Role-based sidebar content
+if st.session_state.role in ["admin", "clinician"]:
+     st.sidebar.header(translations["sidebar_header"][sidebar_lang])
+     st.sidebar.write(translations["sidebar_content"][sidebar_lang])
+
+elif st.session_state.role == "lab":
+     st.sidebar.header(translations["lab_sidebar_header"][sidebar_lang])
+     st.sidebar.write(translations["lab_sidebar_content"][sidebar_lang])
+
+# ================= ADMIN EXPORT =================
+if st.session_state.role == "admin":
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Admin Tools")
+
+    if st.sidebar.button("Prepare Dataset CSV", key="prepare_csv_btn"):
+        csv_data = get_export_csv()
+        if csv_data is not None:
+            st.session_state.export_csv_data = csv_data
+
+    if "export_csv_data" in st.session_state and st.session_state.export_csv_data is not None:
+        st.sidebar.download_button(
+            label="Download Dataset CSV",
+            data=st.session_state.export_csv_data,
+            file_name="responses_export.csv",
+            mime="text/csv",
+            key="download_csv_btn"
+        )
+        
+# ================= LOG OUT =================
 if st.sidebar.button("Logout"):
     st.session_state.logged_in = False
     st.session_state.username = ""
+    st.session_state.role = None
     st.rerun()
 
 # ---------------- MAIN TABS ----------------
-tab_en, tab_sw, tab_lab = st.tabs(["English", "Kiswahili", "Lab Confirmation"])
+allowed_diag = st.session_state.role in ["admin", "clinician"]
+allowed_lab = st.session_state.role in ["admin", "lab"]
+
+if allowed_diag and allowed_lab:
+    tab_en, tab_sw, tab_lab = st.tabs(["English", "Kiswahili", "Lab Confirmation"])
+elif allowed_diag:
+    tab_en, tab_sw = st.tabs(["English", "Kiswahili"])
+    tab_lab = None
+elif allowed_lab:
+    tab_lab, = st.tabs(["Lab Confirmation"])
+    tab_en = None
+    tab_sw = None
+else:
+    st.error("You do not have access to any part of this app.")
+    st.stop()
 
 # ================= ENGLISH TAB =================
-with tab_en:
-    st.title(translations["title"]["en"])
+if tab_en is not None:    
+    with tab_en:
+        if st.session_state.role not in ["admin", "clinician"]:
+            st.warning("You are not authorized to access the diagnosis section.")
+            st.stop()
+        
+        st.title(translations["title"]["en"])
 
-    patient_id_en = st.text_input(
-        translations["patient_id_label"]["en"],
-        help=translations["patient_id_help"]["en"],
-        key="patient_id_en"
-    )
-
-    location_en = st.selectbox(
-        translations["location_label"]["en"],
-        translations["location_options"]["en"],
-        key="location_en"
-    )
-
-    selected_symptoms_en = st.multiselect(
-        translations["symptoms_prompt"]["en"],
-        symptoms_en + ["Others"],
-        placeholder=translations["symptoms_placeholder"]["en"]
-    )
-
-    other_symptoms_en = ""
-
-    if "Others" in selected_symptoms_en:
-        other_symptoms_en = st.text_area(
-            "Please list any other symptoms or signs you have:",
-            key="other_symptoms_en"
+        patient_id_en = st.text_input(
+            translations["patient_id_label"]["en"],
+            help=translations["patient_id_help"]["en"],
+            key="patient_id_en"
         )
 
-        if st.button(translations["send_email_button"]["en"], key="send_email_en"):
-            if other_symptoms_en.strip():
-                subject = "Additional Symptoms Submitted via App"
-                body = f"The user has submitted additional symptoms:\n\n{other_symptoms_en}"
-                receiver_email = "diagai2024@gmail.com"
+        location_en = st.selectbox(
+            translations["location_label"]["en"],
+            translations["location_options"]["en"],
+            key="location_en"
+        )
 
-                if send_email(subject, body, receiver_email):
-                    st.success("Your symptoms have been sent successfully! Thank you.")
-            else:
-                st.warning(translations["send_email_warning"]["en"])
+        selected_symptoms_en = st.multiselect(
+            translations["symptoms_prompt"]["en"],
+            symptoms_en + ["Others"],
+            placeholder=translations["symptoms_placeholder"]["en"]
+        )
 
-    if st.button(translations["button_results"]["en"], key="predict_en"):
-        if not is_valid_patient_id(patient_id_en):
-            st.error(translations["patient_id_error"]["en"])
-        else:
-            features = [1 if symptom in selected_symptoms_en else 0 for symptom in symptoms_en]
-            prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
-            st.write(f"**{translations['predictive_score_label']['en']}:** {prediction * 100:.1f}%")
-            st.session_state.prediction_en = float(prediction)
-            st.session_state.selected_symptoms_saved_en = selected_symptoms_en
-            st.session_state.other_symptoms_saved_en = other_symptoms_en
-            st.session_state.patient_id_saved_en = patient_id_en.strip()
-            st.session_state.location_saved_en = location_en
+        other_symptoms_en = ""
 
-            if prediction > 0.43:
-                st.session_state.classification_en = "Probably positive for malaria"
-                st.success(translations["positive_result"]["en"])
-                st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
-            else:
-                st.session_state.classification_en = "Probably negative for malaria"
-                st.info(translations["negative_result"]["en"])
+        if "Others" in selected_symptoms_en:
+            other_symptoms_en = st.text_area(
+                "Please list any other symptoms or signs you have:",
+                key="other_symptoms_en"
+            )
 
-    if "prediction_en" in st.session_state:
-        if st.button(translations["save_button"]["en"], key="save_en"):
-            if not is_valid_patient_id(st.session_state.patient_id_saved_en):
+            if st.button(translations["send_email_button"]["en"], key="send_email_en"):
+                if other_symptoms_en.strip():
+                    subject = "Additional Symptoms Submitted via App"
+                    body = f"The user has submitted additional symptoms:\n\n{other_symptoms_en}"
+                    receiver_email = "diagai2024@gmail.com"
+
+                    if send_email(subject, body, receiver_email):
+                        st.success("Your symptoms have been sent successfully! Thank you.")
+                else:
+                    st.warning(translations["send_email_warning"]["en"])
+
+        if st.button(translations["button_results"]["en"], key="predict_en"):
+            if not is_valid_patient_id(patient_id_en):
                 st.error(translations["patient_id_error"]["en"])
             else:
-                saved = submit_to_database(
+                features = [1 if symptom in selected_symptoms_en else 0 for symptom in symptoms_en]
+                prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
+                st.write(f"**{translations['predictive_score_label']['en']}:** {prediction * 100:.1f}%")
+                st.session_state.prediction_en = float(prediction)
+                st.session_state.selected_symptoms_saved_en = selected_symptoms_en
+                st.session_state.other_symptoms_saved_en = other_symptoms_en
+                st.session_state.patient_id_saved_en = patient_id_en.strip()
+                st.session_state.location_saved_en = location_en
+
+                if prediction > 0.43:
+                    st.session_state.classification_en = "Probably positive for malaria"
+                    st.success(translations["positive_result"]["en"])
+                    st.write(f"**Malaria Summary:** {get_wikipedia_summary('malaria', lang='en')}")
+                else:
+                    st.session_state.classification_en = "Probably negative for malaria"
+                    st.info(translations["negative_result"]["en"])
+
+        if "prediction_en" in st.session_state:
+            if st.button(translations["save_button"]["en"], key="save_en"):
+                if not is_valid_patient_id(st.session_state.patient_id_saved_en):
+                    st.error(translations["patient_id_error"]["en"])
+                else:
+                    saved = submit_to_database(
                     username=st.session_state.username,
-                    patient_id=st.session_state.patient_id_saved_en,
-                    location=st.session_state.location_saved_en,
+                    role=st.session_state.role,
+                    patient_id=st.session_state.patient_id_en,
+                    location=st.session_state.location_en_code,
                     language="English",
-                    selected_symptoms=st.session_state.selected_symptoms_saved_en,
-                    other_symptoms=st.session_state.other_symptoms_saved_en,
-                    prediction=st.session_state.prediction_en,
-                    classification=st.session_state.classification_en
-                )
+                    selected_symptoms=selected_symptoms,
+                    other_symptoms=other_text,
+                    prediction=prediction,
+                    classification=classification
+                    )
 
-                if saved:
-                    st.success(translations["save_success"]["en"])
+                    if saved:
+                        st.success(translations["save_success"]["en"])
 # ================= SWAHILI TAB =================
-with tab_sw:
-    st.title(translations["title"]["sw"])
+if tab_sw is not None:
+    with tab_sw:
+        if st.session_state.role not in ["admin", "clinician"]:
+            st.warning("Huna ruhusa ya kutumia sehemu ya uchunguzi.")
+            st.stop()
+        
+        st.title(translations["title"]["sw"])
 
-    patient_id_sw = st.text_input(
-        translations["patient_id_label"]["sw"],
-        help=translations["patient_id_help"]["sw"],
-        key="patient_id_sw"
-    )
-
-    location_sw = st.selectbox(
-        translations["location_label"]["sw"],
-        translations["location_options"]["sw"],
-        key="location_sw"
-    )
-
-    selected_symptoms_sw = st.multiselect(
-        translations["symptoms_prompt"]["sw"],
-        symptoms_sw + ["Dalili Nyingine"],
-        placeholder=translations["symptoms_placeholder"]["sw"]
-    )
-
-    other_symptoms_sw = ""
-
-    if "Dalili Nyingine" in selected_symptoms_sw:
-        other_symptoms_sw = st.text_area(
-            "Andika dalili nyingine unazopata",
-            key="other_symptoms_sw"
+        patient_id_sw = st.text_input(
+            translations["patient_id_label"]["sw"],
+            help=translations["patient_id_help"]["sw"],
+            key="patient_id_sw"
         )
 
-        if st.button(translations["send_email_button"]["sw"], key="send_email_sw"):
-            if other_symptoms_sw.strip():
-                subject = "Dalili za Ziada Zimetumwa Kupitia Programu"
-                body = f"Mtumiaji ametuma dalili zifuatazo:\n\n{other_symptoms_sw}"
-                receiver_email = "diagai2024@gmail.com"
+        location_sw = st.selectbox(
+            translations["location_label"]["sw"],
+            translations["location_options"]["sw"],
+            key="location_sw"
+        )
 
-                if send_email(subject, body, receiver_email):
-                    st.success("Dalili zako zimetumwa kikamilifu! Asante.")
-            else:
-                st.warning(translations["send_email_warning"]["sw"])
+        selected_symptoms_sw = st.multiselect(
+            translations["symptoms_prompt"]["sw"],
+            symptoms_sw + ["Dalili Nyingine"],
+            placeholder=translations["symptoms_placeholder"]["sw"]
+        )
 
-    selected_symptoms_mapped = [
-        symptoms_en[symptoms_sw.index(symptom)]
-        for symptom in selected_symptoms_sw
-        if symptom != "Dalili Nyingine"
-    ]
+        other_symptoms_sw = ""
 
-    if st.button(translations["button_results"]["sw"], key="predict_sw"):
-        if not is_valid_patient_id(patient_id_sw):
-            st.error(translations["patient_id_error"]["sw"])
-        else:
-            features = [1 if symptom in selected_symptoms_mapped else 0 for symptom in symptoms_en]
-            prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
-            st.write(f"**{translations['predictive_score_label']['sw']}:** {prediction * 100:.1f}%")
-            st.session_state.prediction_sw = float(prediction)
-            st.session_state.selected_symptoms_saved_sw = selected_symptoms_sw
-            st.session_state.other_symptoms_saved_sw = other_symptoms_sw
-            st.session_state.patient_id_saved_sw = patient_id_sw.strip()
-            st.session_state.location_saved_sw = location_map_sw_to_en[location_sw]
+        if "Dalili Nyingine" in selected_symptoms_sw:
+            other_symptoms_sw = st.text_area(
+                "Andika dalili nyingine unazopata",
+                key="other_symptoms_sw"
+            )
 
-            if prediction > 0.43:
-                st.session_state.classification_sw = "Inawezekana una malaria"
-                st.success(translations["positive_result"]["sw"])
-                st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
-            else:
-                st.session_state.classification_sw = "Inawezekana huna malaria"
-                st.info(translations["negative_result"]["sw"])
+            if st.button(translations["send_email_button"]["sw"], key="send_email_sw"):
+                if other_symptoms_sw.strip():
+                    subject = "Dalili za Ziada Zimetumwa Kupitia Programu"
+                    body = f"Mtumiaji ametuma dalili zifuatazo:\n\n{other_symptoms_sw}"
+                    receiver_email = "diagai2024@gmail.com"
 
-    if "prediction_sw" in st.session_state:
-        if st.button(translations["save_button"]["sw"], key="save_sw"):
-            if not is_valid_patient_id(st.session_state.patient_id_saved_sw):
+                    if send_email(subject, body, receiver_email):
+                        st.success("Dalili zako zimetumwa kikamilifu! Asante.")
+                else:
+                    st.warning(translations["send_email_warning"]["sw"])
+
+        selected_symptoms_mapped = [
+            symptoms_en[symptoms_sw.index(symptom)]
+            for symptom in selected_symptoms_sw
+            if symptom != "Dalili Nyingine"
+        ]
+
+        if st.button(translations["button_results"]["sw"], key="predict_sw"):
+            if not is_valid_patient_id(patient_id_sw):
                 st.error(translations["patient_id_error"]["sw"])
             else:
-                saved = submit_to_database(
-                    username=st.session_state.username,
-                    patient_id=st.session_state.patient_id_saved_sw,
-                    location=st.session_state.location_saved_sw,
-                    language="Kiswahili",
-                    selected_symptoms=st.session_state.selected_symptoms_saved_sw,
-                    other_symptoms=st.session_state.other_symptoms_saved_sw,
-                    prediction=st.session_state.prediction_sw,
-                    classification=st.session_state.classification_sw
-                )
+                features = [1 if symptom in selected_symptoms_mapped else 0 for symptom in symptoms_en]
+                prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
+                st.write(f"**{translations['predictive_score_label']['sw']}:** {prediction * 100:.1f}%")
+                st.session_state.prediction_sw = float(prediction)
+                st.session_state.selected_symptoms_saved_sw = selected_symptoms_sw
+                st.session_state.other_symptoms_saved_sw = other_symptoms_sw
+                st.session_state.patient_id_saved_sw = patient_id_sw.strip()
+                st.session_state.location_saved_sw = location_map_sw_to_en[location_sw]
 
-                if saved:
-                    st.success(translations["save_success"]["sw"])
+                if prediction > 0.43:
+                    st.session_state.classification_sw = "Inawezekana una malaria"
+                    st.success(translations["positive_result"]["sw"])
+                    st.write(f"**Muhtasari wa Malaria:** {get_wikipedia_summary('malaria', lang='sw')}")
+                else:
+                    st.session_state.classification_sw = "Inawezekana huna malaria"
+                    st.info(translations["negative_result"]["sw"])
+
+        if "prediction_sw" in st.session_state:
+            if st.button(translations["save_button"]["sw"], key="save_sw"):
+                if not is_valid_patient_id(st.session_state.patient_id_saved_sw):
+                    st.error(translations["patient_id_error"]["sw"])
+                else:
+                    saved = submit_to_database(
+                    username=st.session_state.username,
+                    role=st.session_state.role,
+                    patient_id=st.session_state.patient_id_sw,
+                    location=st.session_state.location_sw_code,
+                    language="Kiswahili",
+                    selected_symptoms=selected_symptoms_sw,
+                    other_symptoms=other_text,
+                    prediction=prediction,
+                    classification=classification
+                    )
+
+                    if saved:
+                        st.success(translations["save_success"]["sw"])
 
 def search_patient_records(patient_id):
     url = f"{API_BASE_URL}/search_by_patient_id/{patient_id}"
 
-    response = safe_api_request(
-        method="GET",
-        url=url,
-        connection_message="Record search is not yet active in the cloud version of this app."
-    )
+    try:
+        response = requests.get(url, params={"role": st.session_state.role})
 
-    if response is not None:
-        return response.json().get("results", [])
-
-    return []
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 403:
+            st.warning("You are not authorized to search patient records.")
+            return []
+        else:
+            st.error(f"Search failed: {response.text}")
+            return []
+    except Exception:
+        st.info("Database search is not yet active in the cloud version of this app.")
+        return []
+        
 
 def update_lab_result(record_id, lab_result, lab_test_type, confirmed_by):
     url = f"{API_BASE_URL}/update_lab_result"
 
     payload = {
+        "role": st.session_state.role,
         "record_id": record_id,
         "lab_result": lab_result,
         "lab_test_type": lab_test_type,
         "confirmed_by": confirmed_by
     }
 
-    response = safe_api_request(
-        method="POST",
-        url=url,
-        payload=payload,
-        connection_message="Lab confirmation update is not yet active in the cloud version of this app."
-    )
+    try:
+        response = requests.post(url, json=payload)
 
-    return response is not None
+        if response.status_code == 200:
+            return True
+        elif response.status_code == 403:
+            st.warning("You are not authorized to update lab results.")
+            return False
+        else:
+            st.error(f"Update failed: {response.text}")
+            return False
+    except Exception:
+        st.info("Lab confirmation saving is not yet active in the cloud version of this app.")
+        return False
+
+def get_export_csv():
+    url = f"{API_BASE_URL}/export_csv"
+
+    try:
+        response = requests.get(
+            url,
+            params={"role": st.session_state.role},
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            return response.content
+        elif response.status_code == 403:
+            st.warning("You are not authorized to export the dataset.")
+            return None
+        else:
+            st.error(f"CSV export failed: {response.text}")
+            return None
+
+    except Exception:
+        st.info("CSV export is not yet active in the cloud version of this app.")
+        return None
 
 # ================= LAB CONFIRMATION TAB =================
-with tab_lab:
-    st.title("Lab Confirmation")
+if tab_lab is not None:
+    with tab_lab:
+        st.title("Lab Confirmation")
 
-    st.write("Search for a patient record and update the laboratory confirmation result.")
+        # Extra protection even if tab is somehow reached
+        if st.session_state.role not in ["admin", "lab"]:
+            st.warning("You are not authorized to access the Lab Confirmation section.")
+            st.stop()
 
-    patient_search_id = st.text_input(
-        "Enter Patient ID to search",
-        key="lab_patient_search"
-    )
+        st.write("Search for a patient record and update the laboratory confirmation result.")
 
-    if st.button("Search Records", key="search_records_btn"):
-        if not patient_search_id.strip():
-            st.warning("Please enter a Patient ID.")
-        elif not is_valid_patient_id(patient_search_id):
-            st.warning("Patient ID must be alphanumeric.")
-        else:
-            records = search_patient_records(patient_search_id.strip())
-            st.session_state.lab_search_results = records
-
-    if "lab_search_results" in st.session_state and st.session_state.lab_search_results:
-        records = st.session_state.lab_search_results
-
-        record_options = {
-            f"Record ID {r['id']} | {r['timestamp']} | Score: {r['prediction']:.3f} | {r['classification']}": r
-            for r in records
-        }
-
-        selected_label = st.selectbox(
-            "Select a record to update",
-            list(record_options.keys()),
-            key="record_select_lab"
+        patient_search_id = st.text_input(
+            "Enter Patient ID to search",
+            key="lab_patient_search"
         )
 
-        selected_record = record_options[selected_label]
+        if st.button("Search Records", key="search_records_btn"):
+            if not patient_search_id.strip():
+                st.warning("Please enter a Patient ID.")
+            elif not is_valid_patient_id(patient_search_id):
+                st.warning("Patient ID must be alphanumeric.")
+            else:
+                records = search_patient_records(patient_search_id.strip())
+                st.session_state.lab_search_results = records
 
-        st.markdown("### Selected Record")
-        st.write(f"**Record ID:** {selected_record['id']}")
-        st.write(f"**Patient ID:** {selected_record['patient_id']}")
-        st.write(f"**Timestamp:** {selected_record['timestamp']}")
-        st.write(f"**Prediction Score:** {selected_record['prediction']:.3f}")
-        st.write(f"**Classification:** {selected_record['classification']}")
-        st.write(f"**Symptoms:** {', '.join(selected_record['selected_symptoms']) if selected_record['selected_symptoms'] else 'None'}")
-        st.write(f"**Other Symptoms:** {selected_record['other_symptoms'] if selected_record['other_symptoms'] else 'None'}")
-        st.write(f"**Existing Lab Result:** {selected_record['lab_result'] if selected_record['lab_result'] else 'Not yet entered'}")
-        st.write(f"**Existing Test Type:** {selected_record['lab_test_type'] if selected_record['lab_test_type'] else 'Not yet entered'}")
+        if "lab_search_results" in st.session_state and st.session_state.lab_search_results:
+            records = st.session_state.lab_search_results
 
-        st.markdown("### Enter Lab Confirmation")
+            record_options = {
+                f"Record ID {r['id']} | {r['timestamp']} | Score: {r['prediction']:.3f} | {r['classification']}": r
+                for r in records
+            }
 
-        lab_result = st.selectbox(
-            "Lab Result",
-            ["Positive", "Negative", "Pending"],
-            key="lab_result_input"
-        )
-
-        lab_test_type = st.selectbox(
-            "Test Type",
-            ["Microscopy", "RDT", "PCR", "Clinical only"],
-            key="lab_test_type_input"
-        )
-
-        if st.button("Save Lab Confirmation", key="save_lab_confirmation"):
-            saved = update_lab_result(
-                record_id=selected_record["id"],
-                lab_result=lab_result,
-                lab_test_type=lab_test_type,
-                confirmed_by=st.session_state.username
+            selected_label = st.selectbox(
+                "Select a record to update",
+                list(record_options.keys()),
+                key="record_select_lab"
             )
 
-            if saved:
-                st.success("Lab confirmation updated successfully.")
+            selected_record = record_options[selected_label]
+
+            st.markdown("### Selected Record")
+            st.write(f"**Record ID:** {selected_record['id']}")
+            st.write(f"**Patient ID:** {selected_record['patient_id']}")
+            st.write(f"**Timestamp:** {selected_record['timestamp']}")
+            st.write(f"**Prediction Score:** {selected_record['prediction']:.3f}")
+            st.write(f"**Classification:** {selected_record['classification']}")
+            st.write(f"**Symptoms:** {', '.join(selected_record['selected_symptoms']) if selected_record['selected_symptoms'] else 'None'}")
+            st.write(f"**Other Symptoms:** {selected_record['other_symptoms'] if selected_record['other_symptoms'] else 'None'}")
+            st.write(f"**Existing Lab Result:** {selected_record['lab_result'] if selected_record['lab_result'] else 'Not yet entered'}")
+            st.write(f"**Existing Test Type:** {selected_record['lab_test_type'] if selected_record['lab_test_type'] else 'Not yet entered'}")
+
+            st.markdown("### Enter Lab Confirmation")
+
+            lab_result = st.selectbox(
+                "Lab Result",
+                ["Positive", "Negative", "Pending"],
+                key="lab_result_input"
+            )
+
+            lab_test_type = st.selectbox(
+                "Test Type",
+                ["Microscopy", "RDT", "PCR", "Clinical only"],
+                key="lab_test_type_input"
+            )
+
+            if st.button("Save Lab Confirmation", key="save_lab_confirmation"):
+                saved = update_lab_result(
+                    record_id=selected_record["id"],
+                    lab_result=lab_result,
+                    lab_test_type=lab_test_type,
+                    confirmed_by=st.session_state.username
+                )
+
+                if saved:
+                    st.success("Lab confirmation updated successfully.")
