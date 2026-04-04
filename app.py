@@ -66,19 +66,19 @@ if not st.session_state.logged_in:
         login_submitted = st.form_submit_button("Login")
 
     if login_submitted:
-    if not username.strip() or not password.strip():
-        st.warning("Please enter both username and password.")
-    else:
-        login_success, role = check_login(username, password)
-
-        if login_success:
-            st.session_state.logged_in = True
-            st.session_state.username = normalize_username(username)
-            st.session_state.role = role
-            st.success("Login successful")
-            st.rerun()
+        if not username.strip() or not password.strip():
+            st.warning("Please enter both username and password.")
         else:
-            st.error("Invalid username or password")
+            login_success, role = check_login(username, password)
+
+            if login_success:
+                st.session_state.logged_in = True
+                st.session_state.username = normalize_username(username)
+                st.session_state.role = role
+                st.success("Login successful")
+                st.rerun()
+            else:
+                st.error("Invalid username or password")
 
     st.stop()
 
