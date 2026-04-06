@@ -230,6 +230,46 @@ Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa
     "sw": "Uthibitisho wa Maabara"
     },
     
+    "facility_name_label": {
+    "en": "Facility Name",
+    "sw": "Jina la Kituo cha Afya"
+    },
+
+    "facility_name_help": {
+        "en": "Enter the name of the health facility.",
+        "sw": "Weka jina la kituo cha afya."
+    },
+
+    "facility_name_error": {
+        "en": "Facility name is required.",
+        "sw": "Jina la kituo cha afya linahitajika."
+    },
+
+    "date_of_birth_label": {
+        "en": "Date of Birth",
+        "sw": "Tarehe ya Kuzaliwa"
+    },
+
+    "date_of_birth_help": {
+        "en": "Select the patient's date of birth.",
+        "sw": "Chagua tarehe ya kuzaliwa ya mgonjwa."
+    },
+
+    "sex_label": {
+        "en": "Sex",
+        "sw": "Jinsia"
+    },
+
+    "sex_options": {
+        "en": ["Male", "Female"],
+        "sw": ["Mwanaume", "Mwanamke"]
+    },
+
+    "sex_error": {
+        "en": "Sex is required.",
+        "sw": "Jinsia inahitajika."
+    },
+    
     "lab_sidebar_content": {
     "en": """
         This section is for laboratory confirmation of previously submitted patient records.
@@ -261,6 +301,11 @@ location_map_sw_to_en = {
     "Vijijini": "Rural",
     "Pembezoni mwa Mji": "Peri-Urban",
     "Mjini": "Urban"
+}
+
+sex_map_sw_to_en = {
+    "Mwanaume": "Male",
+    "Mwanamke": "Female"
 }
 
 # ---------------- WIKIPEDIA ----------------
@@ -322,13 +367,29 @@ def safe_api_request(method, url, payload=None, connection_message="This feature
         st.warning(f"Unexpected error: {str(e)}")
         return None
 
-def submit_to_database(username, role, patient_id, location, language, selected_symptoms, other_symptoms, prediction, classification):
+def submit_to_database(
+    username,
+    role,
+    patient_id,
+    facility_name,
+    date_of_birth,
+    sex,
+    location,
+    language,
+    selected_symptoms,
+    other_symptoms,
+    prediction,
+    classification
+):
     url = f"{API_BASE_URL}/submit"
 
     payload = {
         "username": username,
         "role": role,
         "patient_id": patient_id,
+        "facility_name": facility_name,
+        "date_of_birth": str(date_of_birth),
+        "sex": sex,
         "location": location,
         "language": language,
         "selected_symptoms": selected_symptoms,
@@ -703,6 +764,24 @@ if tab_en is not None:
             key="patient_id_en"
         )
 
+        facility_name_en = st.text_input(
+            translations["facility_name_label"]["en"],
+            help=translations["facility_name_help"]["en"],
+            key="facility_name_en"
+        )
+
+        date_of_birth_en = st.date_input(
+            translations["date_of_birth_label"]["en"],
+            help=translations["date_of_birth_help"]["en"],
+            key="date_of_birth_en"
+        )
+
+        sex_en = st.selectbox(
+            translations["sex_label"]["en"],
+            translations["sex_options"]["en"],
+            key="sex_en"
+        )
+
         location_en = st.selectbox(
             translations["location_label"]["en"],
             translations["location_options"]["en"],
@@ -737,6 +816,8 @@ if tab_en is not None:
         if st.button(translations["button_results"]["en"], key="predict_en"):
             if not is_valid_patient_id(patient_id_en):
                 st.error(translations["patient_id_error"]["en"])
+            elif not facility_name_en.strip():
+                st.error(translations["facility_name_error"]["en"])
             else:
                 features = [1 if symptom in selected_symptoms_en else 0 for symptom in symptoms_en]
                 prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
@@ -745,6 +826,9 @@ if tab_en is not None:
                 st.session_state.selected_symptoms_saved_en = selected_symptoms_en
                 st.session_state.other_symptoms_saved_en = other_symptoms_en
                 st.session_state.patient_id_saved_en = patient_id_en.strip()
+                st.session_state.facility_name_saved_en = facility_name_en.strip()
+                st.session_state.date_of_birth_saved_en = str(date_of_birth_en)
+                st.session_state.sex_saved_en = sex_en
                 st.session_state.location_saved_en = location_en
 
                 if prediction > 0.43:
@@ -764,6 +848,9 @@ if tab_en is not None:
                         username=st.session_state.username,
                         role=st.session_state.role,
                         patient_id=st.session_state.patient_id_saved_en,
+                        facility_name=st.session_state.facility_name_saved_en,
+                        date_of_birth=st.session_state.date_of_birth_saved_en,
+                        sex=st.session_state.sex_saved_en,
                         location=st.session_state.location_saved_en,
                         language="English",
                         selected_symptoms=st.session_state.selected_symptoms_saved_en,
@@ -787,6 +874,24 @@ if tab_sw is not None:
             translations["patient_id_label"]["sw"],
             help=translations["patient_id_help"]["sw"],
             key="patient_id_sw"
+        )
+
+        facility_name_sw = st.text_input(
+            translations["facility_name_label"]["sw"],
+            help=translations["facility_name_help"]["sw"],
+            key="facility_name_sw"
+        )
+
+        date_of_birth_sw = st.date_input(
+            translations["date_of_birth_label"]["sw"],
+            help=translations["date_of_birth_help"]["sw"],
+            key="date_of_birth_sw"
+        )
+
+        sex_sw = st.selectbox(
+            translations["sex_label"]["sw"],
+            translations["sex_options"]["sw"],
+            key="sex_sw"
         )
 
         location_sw = st.selectbox(
@@ -829,6 +934,8 @@ if tab_sw is not None:
         if st.button(translations["button_results"]["sw"], key="predict_sw"):
             if not is_valid_patient_id(patient_id_sw):
                 st.error(translations["patient_id_error"]["sw"])
+            elif not facility_name_sw.strip():
+                st.error(translations["facility_name_error"]["sw"])
             else:
                 features = [1 if symptom in selected_symptoms_mapped else 0 for symptom in symptoms_en]
                 prediction = model.predict(np.array(features).reshape(1, -1), verbose=0)[0][0]
@@ -837,6 +944,9 @@ if tab_sw is not None:
                 st.session_state.selected_symptoms_saved_sw = selected_symptoms_sw
                 st.session_state.other_symptoms_saved_sw = other_symptoms_sw
                 st.session_state.patient_id_saved_sw = patient_id_sw.strip()
+                st.session_state.facility_name_saved_sw = facility_name_sw.strip()
+                st.session_state.date_of_birth_saved_sw = str(date_of_birth_sw)
+                st.session_state.sex_saved_sw = sex_map_sw_to_en[sex_sw]
                 st.session_state.location_saved_sw = location_map_sw_to_en[location_sw]
 
                 if prediction > 0.43:
@@ -856,6 +966,9 @@ if tab_sw is not None:
                         username=st.session_state.username,
                         role=st.session_state.role,
                         patient_id=st.session_state.patient_id_saved_sw,
+                        facility_name=st.session_state.facility_name_saved_sw,
+                        date_of_birth=st.session_state.date_of_birth_saved_sw,
+                        sex=st.session_state.sex_saved_sw,
                         location=st.session_state.location_saved_sw,
                         language="Kiswahili",
                         selected_symptoms=st.session_state.selected_symptoms_saved_sw,
@@ -912,6 +1025,9 @@ if tab_lab is not None:
             st.markdown("### Selected Record")
             st.write(f"**Record ID:** {selected_record['id']}")
             st.write(f"**Patient ID:** {selected_record['patient_id']}")
+            st.write(f"**Facility Name:** {selected_record.get('facility_name', '') or 'Not entered'}")
+            st.write(f"**Date of Birth:** {selected_record.get('date_of_birth', '') or 'Not entered'}")
+            st.write(f"**Sex:** {selected_record.get('sex', '') or 'Not entered'}")
             st.write(f"**Timestamp:** {selected_record['timestamp']}")
             st.write(f"**Prediction Score:** {selected_record['prediction']:.3f}")
             st.write(f"**Classification:** {selected_record['classification']}")
@@ -948,305 +1064,341 @@ if tab_lab is not None:
 # ================= ADMIN DASHBOARD =================
 if st.session_state.role == "admin":
     st.markdown("---")
-    st.subheader("📊 Admin Dashboard")
+    st.header("📊 Admin Dashboard")
 
-    with st.expander("Open Admin Dashboard", expanded=False):
-        st.write("Filter, review, and analyze saved diagnosis records.")
+    st.write("Search, filter, review, and export saved patient records.")
 
-        # -------- FILTERS --------
-        colf1, colf2, colf3 = st.columns(3)
+    admin_records = get_all_records()
 
-        with colf1:
-            filter_location = st.selectbox(
-                "Filter by Location",
-                ["All", "Rural", "Peri-Urban", "Urban"],
-                key="admin_filter_location_v5"
+    if not admin_records:
+        st.info("No records available yet.")
+    else:
+        import pandas as pd
+
+        df = pd.DataFrame(admin_records)
+
+        # ---------------- CLEAN / STANDARDIZE ----------------
+        if "selected_symptoms" in df.columns:
+            def safe_symptom_display(x):
+                if isinstance(x, list):
+                    return ", ".join(x)
+                elif isinstance(x, str):
+                    return x
+                return ""
+            df["selected_symptoms_display"] = df["selected_symptoms"].apply(safe_symptom_display)
+        else:
+            df["selected_symptoms_display"] = ""
+
+        # Standardize missing values for filtering/display
+        for col in [
+            "location", "classification", "lab_result", "lab_test_type",
+            "confirmed_by", "facility_name", "date_of_birth", "sex",
+            "other_symptoms", "patient_id", "username", "language"
+        ]:
+            if col not in df.columns:
+                df[col] = ""
+            df[col] = df[col].fillna("")
+
+        if "prediction" in df.columns:
+            df["prediction_percent"] = (pd.to_numeric(df["prediction"], errors="coerce") * 100).round(1)
+        else:
+            df["prediction_percent"] = None
+
+        # Parse timestamp
+        if "timestamp" in df.columns:
+            df["timestamp_dt"] = pd.to_datetime(df["timestamp"], errors="coerce")
+            df["date_only"] = df["timestamp_dt"].dt.date
+        else:
+            df["timestamp_dt"] = pd.NaT
+            df["date_only"] = None
+
+        # ---------------- SUMMARY METRICS ----------------
+        total_records = len(df)
+        unique_patients = df["patient_id"].nunique() if "patient_id" in df.columns else 0
+        positive_cases = (df["classification"] == "Probably positive for malaria").sum() + \
+                         (df["classification"] == "Inawezekana una malaria").sum()
+        lab_confirmed_positive = (df["lab_result"] == "Positive").sum()
+
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Total Records", total_records)
+        m2.metric("Unique Patients", unique_patients)
+        m3.metric("Predicted Positive", int(positive_cases))
+        m4.metric("Lab Positive", int(lab_confirmed_positive))
+
+        st.markdown("### 🔎 Filter Records")
+
+        # ---------------- FILTER CONTROLS ----------------
+        c1, c2, c3, c4 = st.columns(4)
+
+        with c1:
+            location_filter = st.multiselect(
+                "Location",
+                sorted([x for x in df["location"].unique() if x != ""]),
+                default=[],
+                key="admin_location_filter_v7"
             )
 
-            filter_lab = st.selectbox(
-                "Filter by Lab Result",
-                ["All", "Positive", "Negative", "Pending", "Blank"],
-                key="admin_filter_lab_v5"
+        with c2:
+            classification_filter = st.multiselect(
+                "Classification",
+                sorted([x for x in df["classification"].unique() if x != ""]),
+                default=[],
+                key="admin_classification_filter_v7"
             )
 
-        with colf2:
-            filter_classification = st.selectbox(
-                "Filter by Classification",
-                ["All", "Probably positive for malaria", "Probably negative for malaria"],
-                key="admin_filter_classification_v5"
+        with c3:
+            lab_result_filter = st.multiselect(
+                "Lab Result",
+                sorted([x for x in df["lab_result"].unique() if x != ""]),
+                default=[],
+                key="admin_lab_result_filter_v7"
             )
 
-            filter_username = st.text_input(
-                "Filter by Username",
-                key="admin_filter_username_v5"
+        with c4:
+            sex_filter = st.multiselect(
+                "Sex",
+                sorted([x for x in df["sex"].unique() if x != ""]),
+                default=[],
+                key="admin_sex_filter_v7"
             )
 
-        with colf3:
-            filter_patient_id = st.text_input(
-                "Filter by Patient ID",
-                key="admin_filter_patient_id_v5"
+        c5, c6, c7, c8 = st.columns(4)
+
+        with c5:
+            facility_filter = st.multiselect(
+                "Facility Name",
+                sorted([x for x in df["facility_name"].unique() if x != ""]),
+                default=[],
+                key="admin_facility_filter_v7"
             )
 
-            filter_limit = st.selectbox(
-                "Max records",
-                [100, 250, 500, 1000],
-                index=2,
-                key="admin_filter_limit_v5"
+        with c6:
+            username_filter = st.multiselect(
+                "Entered By",
+                sorted([x for x in df["username"].unique() if x != ""]),
+                default=[],
+                key="admin_username_filter_v7"
             )
 
-        col_date1, col_date2 = st.columns(2)
-        with col_date1:
-            filter_start_date = st.date_input(
+        with c7:
+            start_date = st.date_input(
                 "Start Date",
-                key="admin_filter_start_date_v5"
+                value=None,
+                key="admin_start_date_v7"
             )
-        with col_date2:
-            filter_end_date = st.date_input(
+
+        with c8:
+            end_date = st.date_input(
                 "End Date",
-                key="admin_filter_end_date_v5"
+                value=None,
+                key="admin_end_date_v7"
             )
 
-        if st.button("🔍 Load Dashboard Data", key="admin_dashboard_load_v5"):
-            records = get_admin_records(
-                location=None if filter_location == "All" else filter_location,
-                classification=None if filter_classification == "All" else filter_classification,
-                lab_result=None if filter_lab == "All" else filter_lab,
-                username=filter_username.strip() or None,
-                patient_id=filter_patient_id.strip() or None,
-                start_date=filter_start_date,
-                end_date=filter_end_date,
-                limit=filter_limit
+        keyword_search = st.text_input(
+            "Keyword Search (Patient ID, symptoms, facility, username, other symptoms)",
+            key="admin_keyword_search_v7"
+        ).strip().lower()
+
+        # ---------------- APPLY FILTERS ----------------
+        filtered_df = df.copy()
+
+        if location_filter:
+            filtered_df = filtered_df[filtered_df["location"].isin(location_filter)]
+
+        if classification_filter:
+            filtered_df = filtered_df[filtered_df["classification"].isin(classification_filter)]
+
+        if lab_result_filter:
+            filtered_df = filtered_df[filtered_df["lab_result"].isin(lab_result_filter)]
+
+        if sex_filter:
+            filtered_df = filtered_df[filtered_df["sex"].isin(sex_filter)]
+
+        if facility_filter:
+            filtered_df = filtered_df[filtered_df["facility_name"].isin(facility_filter)]
+
+        if username_filter:
+            filtered_df = filtered_df[filtered_df["username"].isin(username_filter)]
+
+        if start_date:
+            filtered_df = filtered_df[
+                filtered_df["timestamp_dt"].dt.date >= start_date
+            ]
+
+        if end_date:
+            filtered_df = filtered_df[
+                filtered_df["timestamp_dt"].dt.date <= end_date
+            ]
+
+        if keyword_search:
+            searchable_cols = [
+                "patient_id", "selected_symptoms_display", "other_symptoms",
+                "facility_name", "username", "classification", "lab_result"
+            ]
+
+            keyword_mask = False
+            for col in searchable_cols:
+                if col in filtered_df.columns:
+                    keyword_mask = keyword_mask | filtered_df[col].astype(str).str.lower().str.contains(keyword_search, na=False)
+
+            filtered_df = filtered_df[keyword_mask]
+
+        st.write(f"**Filtered records:** {len(filtered_df)}")
+
+        # ---------------- PATIENT QUICK SUMMARY ----------------
+        st.markdown("### 👤 Patient Quick Summary")
+
+        if not filtered_df.empty and "patient_id" in filtered_df.columns:
+            patient_summary = (
+                filtered_df.groupby("patient_id")
+                .agg(
+                    total_visits=("id", "count"),
+                    latest_visit=("timestamp", "max"),
+                    latest_prediction=("prediction_percent", "max"),
+                    latest_lab_result=("lab_result", "last")
+                )
+                .reset_index()
             )
-            st.session_state.admin_dashboard_records = records
 
-        # -------- DISPLAY --------
-        if "admin_dashboard_records" in st.session_state:
-            records = st.session_state.admin_dashboard_records
+            st.dataframe(patient_summary, use_container_width=True, hide_index=True)
+        else:
+            st.info("No patient summary available for current filters.")
 
-            if not records:
-                st.info("No records found for the selected filters.")
-            else:
-                df = pd.DataFrame(records)
+        # ---------------- TABLE DISPLAY OPTIONS ----------------
+        st.markdown("### 📋 Detailed Records")
 
-                # Make symptoms readable
-                if "selected_symptoms" in df.columns:
-                    df["selected_symptoms_display"] = df["selected_symptoms"].apply(
-                        lambda x: ", ".join(x) if isinstance(x, list) else ""
-                    )
+        all_display_columns = [
+            "id",
+            "timestamp",
+            "username",
+            "patient_id",
+            "facility_name",
+            "date_of_birth",
+            "sex",
+            "location",
+            "language",
+            "prediction_percent",
+            "classification",
+            "lab_result",
+            "lab_test_type",
+            "confirmed_by",
+            "confirmation_timestamp",
+            "selected_symptoms_display",
+            "other_symptoms"
+        ]
 
-                # Safer datetime parsing
-                if "timestamp" in df.columns:
-                    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+        all_display_columns = [c for c in all_display_columns if c in filtered_df.columns]
 
-                if "confirmation_timestamp" in df.columns:
-                    df["confirmation_timestamp"] = pd.to_datetime(df["confirmation_timestamp"], errors="coerce")
+        default_columns = [
+            "timestamp",
+            "patient_id",
+            "facility_name",
+            "sex",
+            "location",
+            "prediction_percent",
+            "classification",
+            "lab_result",
+            "selected_symptoms_display"
+        ]
+        default_columns = [c for c in default_columns if c in filtered_df.columns]
 
-                # -------- KPI SUMMARY --------
-                total_records = len(df)
-                positive_pred = (df["classification"] == "Probably positive for malaria").sum() if "classification" in df.columns else 0
-                negative_pred = (df["classification"] == "Probably negative for malaria").sum() if "classification" in df.columns else 0
-                lab_positive = (df["lab_result"] == "Positive").sum() if "lab_result" in df.columns else 0
-                lab_negative = (df["lab_result"] == "Negative").sum() if "lab_result" in df.columns else 0
-                lab_pending = ((df["lab_result"] == "Pending") | (df["lab_result"].isna()) | (df["lab_result"] == "")).sum() if "lab_result" in df.columns else 0
+        selected_columns = st.multiselect(
+            "Choose columns to display",
+            all_display_columns,
+            default=default_columns,
+            key="admin_display_columns_v7"
+        )
 
-                st.markdown("### Summary")
-                k1, k2, k3, k4, k5, k6 = st.columns(6)
-                k1.metric("Total", total_records)
-                k2.metric("Pred +", int(positive_pred))
-                k3.metric("Pred -", int(negative_pred))
-                k4.metric("Lab +", int(lab_positive))
-                k5.metric("Lab -", int(lab_negative))
-                k6.metric("Pending", int(lab_pending))
+        if not selected_columns:
+            st.warning("Please select at least one column to display.")
+        else:
+            c9, c10 = st.columns(2)
 
-                # -------- ANALYTICS --------
-                st.markdown("### 📈 Analytics")
-
-                # Prepare helper columns
-                if "classification" in df.columns:
-                    df["prediction_label"] = df["classification"].replace({
-                        "Probably positive for malaria": "Predicted Positive",
-                        "Probably negative for malaria": "Predicted Negative",
-                        "Inawezekana una malaria": "Predicted Positive",
-                        "Inawezekana huna malaria": "Predicted Negative"
-                    })
-
-                if "timestamp" in df.columns:
-                    df["date_only"] = df["timestamp"].dt.date
-
-                # ---- Row 1 Charts ----
-                c1, c2 = st.columns(2)
-
-                with c1:
-                    st.markdown("**Prediction Counts**")
-                    if "prediction_label" in df.columns:
-                        pred_counts = df["prediction_label"].value_counts()
-                        fig, ax = plt.subplots()
-                        pred_counts.plot(kind="bar", ax=ax)
-                        ax.set_ylabel("Count")
-                        ax.set_xlabel("")
-                        plt.xticks(rotation=20)
-                        st.pyplot(fig)
-                        plt.close(fig)
-                    else:
-                        st.info("Prediction data not available.")
-
-                with c2:
-                    st.markdown("**Lab Result Counts**")
-                    if "lab_result" in df.columns:
-                        lab_counts = df["lab_result"].fillna("Blank").replace("", "Blank").value_counts()
-                        fig, ax = plt.subplots()
-                        lab_counts.plot(kind="bar", ax=ax)
-                        ax.set_ylabel("Count")
-                        ax.set_xlabel("")
-                        plt.xticks(rotation=20)
-                        st.pyplot(fig)
-                        plt.close(fig)
-                    else:
-                        st.info("Lab result data not available.")
-
-                # ---- Row 2 Charts ----
-                c3, c4 = st.columns(2)
-
-                with c3:
-                    st.markdown("**Records by Location**")
-                    if "location" in df.columns:
-                        loc_counts = df["location"].fillna("Unknown").value_counts()
-                        fig, ax = plt.subplots()
-                        loc_counts.plot(kind="bar", ax=ax)
-                        ax.set_ylabel("Count")
-                        ax.set_xlabel("")
-                        plt.xticks(rotation=20)
-                        st.pyplot(fig)
-                        plt.close(fig)
-                    else:
-                        st.info("Location data not available.")
-
-                with c4:
-                    st.markdown("**Prediction by Location**")
-                    if "location" in df.columns and "prediction_label" in df.columns:
-                        pred_loc = pd.crosstab(df["location"], df["prediction_label"])
-                        fig, ax = plt.subplots()
-                        pred_loc.plot(kind="bar", ax=ax)
-                        ax.set_ylabel("Count")
-                        ax.set_xlabel("")
-                        plt.xticks(rotation=20)
-                        st.pyplot(fig)
-                        plt.close(fig)
-                    else:
-                        st.info("Prediction/location data not available.")
-
-                # ---- Row 3 Charts ----
-                c5, c6 = st.columns(2)
-
-                with c5:
-                    st.markdown("**Lab Result by Location**")
-                    if "location" in df.columns and "lab_result" in df.columns:
-                        lab_loc = pd.crosstab(
-                            df["location"],
-                            df["lab_result"].fillna("Blank").replace("", "Blank")
-                        )
-                        fig, ax = plt.subplots()
-                        lab_loc.plot(kind="bar", ax=ax)
-                        ax.set_ylabel("Count")
-                        ax.set_xlabel("")
-                        plt.xticks(rotation=20)
-                        st.pyplot(fig)
-                        plt.close(fig)
-                    else:
-                        st.info("Lab/location data not available.")
-
-                with c6:
-                    st.markdown("**Records Over Time**")
-                    if "date_only" in df.columns:
-                        trend = df.groupby("date_only").size().sort_index()
-                        fig, ax = plt.subplots()
-                        trend.plot(kind="line", marker="o", ax=ax)
-                        ax.set_ylabel("Count")
-                        ax.set_xlabel("Date")
-                        plt.xticks(rotation=30)
-                        st.pyplot(fig)
-                        plt.close(fig)
-                    else:
-                        st.info("Timestamp data not available.")
-
-                # ---- Agreement Table ----
-                st.markdown("### 🧪 Prediction vs Lab Agreement")
-                if "prediction_label" in df.columns and "lab_result" in df.columns:
-                    agreement = pd.crosstab(
-                        df["prediction_label"],
-                        df["lab_result"].fillna("Blank").replace("", "Blank")
-                    )
-                    st.dataframe(agreement, use_container_width=True)
-                else:
-                    st.info("Agreement table not available.")
-
-                # -------- TABLE VIEW --------
-                st.markdown("### Table View")
-
-                display_columns = [
-                    "id", "timestamp", "username", "patient_id", "location",
-                    "language", "prediction", "classification",
-                    "lab_result", "lab_test_type", "confirmed_by",
-                    "confirmation_timestamp", "selected_symptoms_display", "other_symptoms"
-                ]
-
-                display_columns = [c for c in display_columns if c in df.columns]
-
+            with c9:
                 sort_column = st.selectbox(
                     "Sort table by",
-                    display_columns,
-                    index=1 if "timestamp" in display_columns else 0,
-                    key="admin_sort_column_v5"
+                    selected_columns,
+                    index=0,
+                    key="admin_sort_column_v7"
                 )
 
-                sort_ascending = st.checkbox("Sort ascending", value=False, key="admin_sort_ascending_v5")
-
-                df_display = df[display_columns].sort_values(
-                    by=sort_column,
-                    ascending=sort_ascending,
-                    na_position="last"
+            with c10:
+                sort_ascending = st.checkbox(
+                    "Sort ascending",
+                    value=False,
+                    key="admin_sort_ascending_v7"
                 )
 
-                st.dataframe(df_display, use_container_width=True, hide_index=True)
+            df_display = filtered_df[selected_columns].sort_values(
+                by=sort_column,
+                ascending=sort_ascending,
+                na_position="last"
+            )
 
-                # -------- FILTERED CSV DOWNLOAD --------
-                filtered_csv = records_to_csv(records)
-                if filtered_csv is not None:
-                    st.download_button(
-                        label="⬇️ Download Filtered Results as CSV",
-                        data=filtered_csv,
-                        file_name="filtered_admin_dashboard_export.csv",
-                        mime="text/csv",
-                        key="admin_filtered_csv_download_v5"
-                    )
+            # Friendly column names
+            rename_map = {
+                "id": "Record ID",
+                "timestamp": "Timestamp",
+                "username": "Entered By",
+                "patient_id": "Patient ID",
+                "facility_name": "Facility Name",
+                "date_of_birth": "Date of Birth",
+                "sex": "Sex",
+                "location": "Location",
+                "language": "Language",
+                "prediction_percent": "Prediction Score (%)",
+                "classification": "Classification",
+                "lab_result": "Lab Result",
+                "lab_test_type": "Lab Test Type",
+                "confirmed_by": "Confirmed By",
+                "confirmation_timestamp": "Confirmation Timestamp",
+                "selected_symptoms_display": "Selected Symptoms",
+                "other_symptoms": "Other Symptoms"
+            }
 
-                # -------- RECORD DETAIL PREVIEW --------
-                st.markdown("### Record Detail Preview")
+            df_display = df_display.rename(columns=rename_map)
 
-                record_map = {
-                    f"ID {r['id']} | {r['patient_id']} | {r['timestamp']}": r
-                    for r in records
-                }
+            st.dataframe(df_display, use_container_width=True, hide_index=True)
 
-                selected_record_label = st.selectbox(
-                    "Select one record to preview",
-                    list(record_map.keys()),
-                    key="admin_record_preview_v5"
-                )
+            # ---------------- EXPORT FILTERED TABLE ----------------
+            st.markdown("### ⬇ Export Current Filtered View")
 
-                selected_record = record_map[selected_record_label]
+            export_csv_filtered = df_display.to_csv(index=False).encode("utf-8")
 
-                st.write(f"**Record ID:** {selected_record.get('id', '')}")
-                st.write(f"**Timestamp:** {selected_record.get('timestamp', '')}")
-                st.write(f"**Username:** {selected_record.get('username', '')}")
-                st.write(f"**Patient ID:** {selected_record.get('patient_id', '')}")
-                st.write(f"**Location:** {selected_record.get('location', '')}")
-                st.write(f"**Language:** {selected_record.get('language', '')}")
-                st.write(f"**Prediction Score:** {selected_record.get('prediction', '')}")
-                st.write(f"**Classification:** {selected_record.get('classification', '')}")
-                st.write(f"**Symptoms:** {', '.join(selected_record.get('selected_symptoms', [])) if selected_record.get('selected_symptoms') else 'None'}")
-                st.write(f"**Other Symptoms:** {selected_record.get('other_symptoms', '') or 'None'}")
-                st.write(f"**Lab Result:** {selected_record.get('lab_result', '') or 'Not entered'}")
-                st.write(f"**Lab Test Type:** {selected_record.get('lab_test_type', '') or 'Not entered'}")
-                st.write(f"**Confirmed By:** {selected_record.get('confirmed_by', '') or 'Not entered'}")
-                st.write(f"**Confirmation Timestamp:** {selected_record.get('confirmation_timestamp', '') or 'Not entered'}")
+            st.download_button(
+                label="Download Filtered Table as CSV",
+                data=export_csv_filtered,
+                file_name="filtered_admin_records.csv",
+                mime="text/csv",
+                key="download_filtered_admin_csv_v7"
+            )
+
+        # ---------------- RECORD INSPECTOR ----------------
+        st.markdown("### 🧾 Record Inspector")
+
+        if not filtered_df.empty:
+            record_choices = filtered_df["id"].tolist()
+
+            selected_record_id = st.selectbox(
+                "Select Record ID to inspect",
+                record_choices,
+                key="admin_record_inspector_v7"
+            )
+
+            selected_row = filtered_df[filtered_df["id"] == selected_record_id].iloc[0]
+
+            with st.expander(f"View full details for Record ID {selected_record_id}", expanded=False):
+                st.write(f"**Patient ID:** {selected_row.get('patient_id', '')}")
+                st.write(f"**Facility Name:** {selected_row.get('facility_name', '')}")
+                st.write(f"**Date of Birth:** {selected_row.get('date_of_birth', '')}")
+                st.write(f"**Sex:** {selected_row.get('sex', '')}")
+                st.write(f"**Location:** {selected_row.get('location', '')}")
+                st.write(f"**Language:** {selected_row.get('language', '')}")
+                st.write(f"**Prediction Score:** {selected_row.get('prediction_percent', '')}%")
+                st.write(f"**Classification:** {selected_row.get('classification', '')}")
+                st.write(f"**Selected Symptoms:** {selected_row.get('selected_symptoms_display', '')}")
+                st.write(f"**Other Symptoms:** {selected_row.get('other_symptoms', '')}")
+                st.write(f"**Lab Result:** {selected_row.get('lab_result', '')}")
+                st.write(f"**Lab Test Type:** {selected_row.get('lab_test_type', '')}")
+                st.write(f"**Confirmed By:** {selected_row.get('confirmed_by', '')}")
+                st.write(f"**Confirmation Timestamp:** {selected_row.get('confirmation_timestamp', '')}")
