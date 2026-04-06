@@ -5,6 +5,8 @@ import tensorflow as tf
 import wikipediaapi
 import re
 import requests
+import pandas as pd
+import matplotlib.pyplot as plt
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -377,8 +379,125 @@ def get_export_csv():
         st.info("CSV export is not yet active in the cloud version of this app.")
         return None
 
-def admin_search_records(patient_id):
-    url = f"{API_BASE_URL}/search_by_patient_id/{patient_id}"
+def get_admin_records(
+    location=None,
+    classification=None,
+    lab_result=None,
+    username=None,
+    patient_id=None,
+    start_date=None,
+    end_date=None,
+    limit=500
+):
+    url = f"{API_BASE_URL}/admin_records"
+
+    params = {
+        "role": st.session_state.role,
+        "limit": limit
+    }
+
+    if location:
+        params["location"] = location
+    if classification:
+        params["classification"] = classification
+    if lab_result:
+        params["lab_result"] = lab_result
+    if username:
+        params["username"] = username
+    if patient_id:
+        params["patient_id"] = patient_id
+    if start_date:
+        params["start_date"] = str(start_date)
+    if end_date:
+        params["end_date"] = str(end_date)
+
+    try:
+        response = requests.get(url, params=params, timeout=15)
+
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 403:
+            st.warning("You are not authorized to access the admin dashboard.")
+            return []
+        else:
+            st.error(f"Admin dashboard query failed: {response.text}")
+            return []
+    except Exception:
+        st.info("Admin dashboard is not yet active in the cloud version of this app.")
+        return []
+
+def records_to_csv(records):
+    import csv
+    import io
+
+    if not records:
+        return None
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    columns = list(records[0].keys())
+    writer.writerow(columns)
+
+    for r in records:
+        row = r.copy()
+        if isinstance(row.get("selected_symptoms"), list):
+            row["selected_symptoms"] = "; ".join(row["selected_symptoms"])
+        writer.writerow([row.get(col, "") for col in columns])
+
+    return output.getvalue().encode("utf-8")
+
+
+def get_dashboard_summary(filters):
+    url = f"{API_BASE_URL}/dashboard_summary"
+
+    params = {"role": st.session_state.role}
+    params.update(filters)
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 403:
+            st.warning("You are not authorized to view dashboard summary.")
+            return None
+        else:
+            st.error(f"Dashboard summary failed: {response.text}")
+            return None
+
+    except Exception:
+        st.info("Dashboard summary is not yet active in the cloud version of this app.")
+        return None
+
+def get_dashboard_records(filters, page=1, page_size=25):
+    url = f"{API_BASE_URL}/dashboard_records"
+
+    params = {
+        "role": st.session_state.role,
+        "page": page,
+        "page_size": page_size
+    }
+    params.update(filters)
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 403:
+            st.warning("You are not authorized to view dashboard records.")
+            return None
+        else:
+            st.error(f"Dashboard records failed: {response.text}")
+            return None
+
+    except Exception:
+        st.info("Dashboard records are not yet active in the cloud version of this app.")
+        return None
+
+def get_dashboard_filter_options():
+    url = f"{API_BASE_URL}/dashboard_filter_options"
 
     try:
         response = requests.get(
@@ -390,14 +509,59 @@ def admin_search_records(patient_id):
         if response.status_code == 200:
             return response.json()
         elif response.status_code == 403:
-            st.warning("You are not authorized to search records.")
+            st.warning("You are not authorized to view dashboard filters.")
+            return None
+        else:
+            st.error(f"Dashboard filters failed: {response.text}")
+            return None
+
+    except Exception:
+        st.info("Dashboard filters are not yet active in the cloud version of this app.")
+        return None
+
+def get_filtered_export_csv(filters):
+    url = f"{API_BASE_URL}/export_csv"
+
+    params = {"role": st.session_state.role}
+    params.update(filters)
+
+    try:
+        response = requests.get(url, params=params, timeout=15)
+
+        if response.status_code == 200:
+            return response.content
+        elif response.status_code == 403:
+            st.warning("You are not authorized to export filtered data.")
+            return None
+        else:
+            st.error(f"Filtered CSV export failed: {response.text}")
+            return None
+
+    except Exception:
+        st.info("Filtered CSV export is not yet active in the cloud version of this app.")
+        return None
+
+def get_all_records():
+    url = f"{API_BASE_URL}/all_records"
+
+    try:
+        response = requests.get(
+            url,
+            params={"role": st.session_state.role},
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 403:
+            st.warning("You are not authorized to view all records.")
             return []
         else:
-            st.warning(f"Search failed: {response.text}")
+            st.error(f"Failed to load records: {response.text}")
             return []
 
     except Exception:
-        st.info("Record search is not yet active in the cloud version of this app.")
+        st.info("Admin dashboard data is not yet active in the cloud version of this app.")
         return []
 
 def search_patient_records(patient_id):
@@ -781,55 +945,308 @@ if tab_lab is not None:
                 if saved:
                     st.success("Lab confirmation updated successfully.")
 
-# ================= ADMIN DASHBOARD TAB =================
-if "tab_admin" in locals() and tab_admin is not None:
-    with tab_admin:
-        st.title("Admin Dashboard")
+# ================= ADMIN DASHBOARD =================
+if st.session_state.role == "admin":
+    st.markdown("---")
+    st.subheader("📊 Admin Dashboard")
 
-        if st.session_state.role != "admin":
-            st.warning("You are not authorized to access the Admin Dashboard.")
-            st.stop()
+    with st.expander("Open Admin Dashboard", expanded=False):
+        st.write("Filter, review, and analyze saved diagnosis records.")
 
-        st.write("Search and preview patient records.")
+        # -------- FILTERS --------
+        colf1, colf2, colf3 = st.columns(3)
 
-        admin_patient_search = st.text_input(
-            "Enter Patient ID to search",
-            key="admin_patient_search_main"
-        )
+        with colf1:
+            filter_location = st.selectbox(
+                "Filter by Location",
+                ["All", "Rural", "Peri-Urban", "Urban"],
+                key="admin_filter_location_v5"
+            )
 
-        if st.button("Search Patient Records", key="admin_search_records_main"):
-            if not admin_patient_search.strip():
-                st.warning("Please enter a Patient ID.")
-            elif not is_valid_patient_id(admin_patient_search):
-                st.warning("Patient ID must be alphanumeric.")
-            else:
-                st.session_state.admin_search_results = admin_search_records(admin_patient_search.strip())
+            filter_lab = st.selectbox(
+                "Filter by Lab Result",
+                ["All", "Positive", "Negative", "Pending", "Blank"],
+                key="admin_filter_lab_v5"
+            )
 
-        if "admin_search_results" in st.session_state:
-            records = st.session_state.admin_search_results
+        with colf2:
+            filter_classification = st.selectbox(
+                "Filter by Classification",
+                ["All", "Probably positive for malaria", "Probably negative for malaria"],
+                key="admin_filter_classification_v5"
+            )
+
+            filter_username = st.text_input(
+                "Filter by Username",
+                key="admin_filter_username_v5"
+            )
+
+        with colf3:
+            filter_patient_id = st.text_input(
+                "Filter by Patient ID",
+                key="admin_filter_patient_id_v5"
+            )
+
+            filter_limit = st.selectbox(
+                "Max records",
+                [100, 250, 500, 1000],
+                index=2,
+                key="admin_filter_limit_v5"
+            )
+
+        col_date1, col_date2 = st.columns(2)
+        with col_date1:
+            filter_start_date = st.date_input(
+                "Start Date",
+                key="admin_filter_start_date_v5"
+            )
+        with col_date2:
+            filter_end_date = st.date_input(
+                "End Date",
+                key="admin_filter_end_date_v5"
+            )
+
+        if st.button("🔍 Load Dashboard Data", key="admin_dashboard_load_v5"):
+            records = get_admin_records(
+                location=None if filter_location == "All" else filter_location,
+                classification=None if filter_classification == "All" else filter_classification,
+                lab_result=None if filter_lab == "All" else filter_lab,
+                username=filter_username.strip() or None,
+                patient_id=filter_patient_id.strip() or None,
+                start_date=filter_start_date,
+                end_date=filter_end_date,
+                limit=filter_limit
+            )
+            st.session_state.admin_dashboard_records = records
+
+        # -------- DISPLAY --------
+        if "admin_dashboard_records" in st.session_state:
+            records = st.session_state.admin_dashboard_records
 
             if not records:
-                st.info("No records found.")
+                st.info("No records found for the selected filters.")
             else:
-                st.success(f"{len(records)} record(s) found.")
+                df = pd.DataFrame(records)
 
-                for r in records:
-                    with st.expander(
-                        f"Record ID {r['id']} | {r['timestamp']} | {r['classification']}",
-                        expanded=False
-                    ):
-                        st.write(f"**Patient ID:** {r.get('patient_id', '')}")
-                        st.write(f"**Username:** {r.get('username', '')}")
-                        st.write(f"**Language:** {r.get('language', '')}")
-                        st.write(f"**Location:** {r.get('location', '')}")
-                        st.write(f"**Prediction Score:** {r.get('prediction', 0):.3f}")
-                        st.write(f"**Classification:** {r.get('classification', '')}")
+                # Make symptoms readable
+                if "selected_symptoms" in df.columns:
+                    df["selected_symptoms_display"] = df["selected_symptoms"].apply(
+                        lambda x: ", ".join(x) if isinstance(x, list) else ""
+                    )
 
-                        symptoms = r.get("selected_symptoms", [])
-                        st.write(f"**Symptoms:** {', '.join(symptoms) if symptoms else 'None'}")
+                # Safer datetime parsing
+                if "timestamp" in df.columns:
+                    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
 
-                        st.write(f"**Other Symptoms:** {r.get('other_symptoms') or 'None'}")
-                        st.write(f"**Lab Result:** {r.get('lab_result') or 'Not entered'}")
-                        st.write(f"**Lab Test Type:** {r.get('lab_test_type') or 'Not entered'}")
-                        st.write(f"**Confirmed By:** {r.get('confirmed_by') or 'Not entered'}")
-                        st.write(f"**Timestamp:** {r.get('timestamp', '')}")
+                if "confirmation_timestamp" in df.columns:
+                    df["confirmation_timestamp"] = pd.to_datetime(df["confirmation_timestamp"], errors="coerce")
+
+                # -------- KPI SUMMARY --------
+                total_records = len(df)
+                positive_pred = (df["classification"] == "Probably positive for malaria").sum() if "classification" in df.columns else 0
+                negative_pred = (df["classification"] == "Probably negative for malaria").sum() if "classification" in df.columns else 0
+                lab_positive = (df["lab_result"] == "Positive").sum() if "lab_result" in df.columns else 0
+                lab_negative = (df["lab_result"] == "Negative").sum() if "lab_result" in df.columns else 0
+                lab_pending = ((df["lab_result"] == "Pending") | (df["lab_result"].isna()) | (df["lab_result"] == "")).sum() if "lab_result" in df.columns else 0
+
+                st.markdown("### Summary")
+                k1, k2, k3, k4, k5, k6 = st.columns(6)
+                k1.metric("Total", total_records)
+                k2.metric("Pred +", int(positive_pred))
+                k3.metric("Pred -", int(negative_pred))
+                k4.metric("Lab +", int(lab_positive))
+                k5.metric("Lab -", int(lab_negative))
+                k6.metric("Pending", int(lab_pending))
+
+                # -------- ANALYTICS --------
+                st.markdown("### 📈 Analytics")
+
+                # Prepare helper columns
+                if "classification" in df.columns:
+                    df["prediction_label"] = df["classification"].replace({
+                        "Probably positive for malaria": "Predicted Positive",
+                        "Probably negative for malaria": "Predicted Negative",
+                        "Inawezekana una malaria": "Predicted Positive",
+                        "Inawezekana huna malaria": "Predicted Negative"
+                    })
+
+                if "timestamp" in df.columns:
+                    df["date_only"] = df["timestamp"].dt.date
+
+                # ---- Row 1 Charts ----
+                c1, c2 = st.columns(2)
+
+                with c1:
+                    st.markdown("**Prediction Counts**")
+                    if "prediction_label" in df.columns:
+                        pred_counts = df["prediction_label"].value_counts()
+                        fig, ax = plt.subplots()
+                        pred_counts.plot(kind="bar", ax=ax)
+                        ax.set_ylabel("Count")
+                        ax.set_xlabel("")
+                        plt.xticks(rotation=20)
+                        st.pyplot(fig)
+                        plt.close(fig)
+                    else:
+                        st.info("Prediction data not available.")
+
+                with c2:
+                    st.markdown("**Lab Result Counts**")
+                    if "lab_result" in df.columns:
+                        lab_counts = df["lab_result"].fillna("Blank").replace("", "Blank").value_counts()
+                        fig, ax = plt.subplots()
+                        lab_counts.plot(kind="bar", ax=ax)
+                        ax.set_ylabel("Count")
+                        ax.set_xlabel("")
+                        plt.xticks(rotation=20)
+                        st.pyplot(fig)
+                        plt.close(fig)
+                    else:
+                        st.info("Lab result data not available.")
+
+                # ---- Row 2 Charts ----
+                c3, c4 = st.columns(2)
+
+                with c3:
+                    st.markdown("**Records by Location**")
+                    if "location" in df.columns:
+                        loc_counts = df["location"].fillna("Unknown").value_counts()
+                        fig, ax = plt.subplots()
+                        loc_counts.plot(kind="bar", ax=ax)
+                        ax.set_ylabel("Count")
+                        ax.set_xlabel("")
+                        plt.xticks(rotation=20)
+                        st.pyplot(fig)
+                        plt.close(fig)
+                    else:
+                        st.info("Location data not available.")
+
+                with c4:
+                    st.markdown("**Prediction by Location**")
+                    if "location" in df.columns and "prediction_label" in df.columns:
+                        pred_loc = pd.crosstab(df["location"], df["prediction_label"])
+                        fig, ax = plt.subplots()
+                        pred_loc.plot(kind="bar", ax=ax)
+                        ax.set_ylabel("Count")
+                        ax.set_xlabel("")
+                        plt.xticks(rotation=20)
+                        st.pyplot(fig)
+                        plt.close(fig)
+                    else:
+                        st.info("Prediction/location data not available.")
+
+                # ---- Row 3 Charts ----
+                c5, c6 = st.columns(2)
+
+                with c5:
+                    st.markdown("**Lab Result by Location**")
+                    if "location" in df.columns and "lab_result" in df.columns:
+                        lab_loc = pd.crosstab(
+                            df["location"],
+                            df["lab_result"].fillna("Blank").replace("", "Blank")
+                        )
+                        fig, ax = plt.subplots()
+                        lab_loc.plot(kind="bar", ax=ax)
+                        ax.set_ylabel("Count")
+                        ax.set_xlabel("")
+                        plt.xticks(rotation=20)
+                        st.pyplot(fig)
+                        plt.close(fig)
+                    else:
+                        st.info("Lab/location data not available.")
+
+                with c6:
+                    st.markdown("**Records Over Time**")
+                    if "date_only" in df.columns:
+                        trend = df.groupby("date_only").size().sort_index()
+                        fig, ax = plt.subplots()
+                        trend.plot(kind="line", marker="o", ax=ax)
+                        ax.set_ylabel("Count")
+                        ax.set_xlabel("Date")
+                        plt.xticks(rotation=30)
+                        st.pyplot(fig)
+                        plt.close(fig)
+                    else:
+                        st.info("Timestamp data not available.")
+
+                # ---- Agreement Table ----
+                st.markdown("### 🧪 Prediction vs Lab Agreement")
+                if "prediction_label" in df.columns and "lab_result" in df.columns:
+                    agreement = pd.crosstab(
+                        df["prediction_label"],
+                        df["lab_result"].fillna("Blank").replace("", "Blank")
+                    )
+                    st.dataframe(agreement, use_container_width=True)
+                else:
+                    st.info("Agreement table not available.")
+
+                # -------- TABLE VIEW --------
+                st.markdown("### Table View")
+
+                display_columns = [
+                    "id", "timestamp", "username", "patient_id", "location",
+                    "language", "prediction", "classification",
+                    "lab_result", "lab_test_type", "confirmed_by",
+                    "confirmation_timestamp", "selected_symptoms_display", "other_symptoms"
+                ]
+
+                display_columns = [c for c in display_columns if c in df.columns]
+
+                sort_column = st.selectbox(
+                    "Sort table by",
+                    display_columns,
+                    index=1 if "timestamp" in display_columns else 0,
+                    key="admin_sort_column_v5"
+                )
+
+                sort_ascending = st.checkbox("Sort ascending", value=False, key="admin_sort_ascending_v5")
+
+                df_display = df[display_columns].sort_values(
+                    by=sort_column,
+                    ascending=sort_ascending,
+                    na_position="last"
+                )
+
+                st.dataframe(df_display, use_container_width=True, hide_index=True)
+
+                # -------- FILTERED CSV DOWNLOAD --------
+                filtered_csv = records_to_csv(records)
+                if filtered_csv is not None:
+                    st.download_button(
+                        label="⬇️ Download Filtered Results as CSV",
+                        data=filtered_csv,
+                        file_name="filtered_admin_dashboard_export.csv",
+                        mime="text/csv",
+                        key="admin_filtered_csv_download_v5"
+                    )
+
+                # -------- RECORD DETAIL PREVIEW --------
+                st.markdown("### Record Detail Preview")
+
+                record_map = {
+                    f"ID {r['id']} | {r['patient_id']} | {r['timestamp']}": r
+                    for r in records
+                }
+
+                selected_record_label = st.selectbox(
+                    "Select one record to preview",
+                    list(record_map.keys()),
+                    key="admin_record_preview_v5"
+                )
+
+                selected_record = record_map[selected_record_label]
+
+                st.write(f"**Record ID:** {selected_record.get('id', '')}")
+                st.write(f"**Timestamp:** {selected_record.get('timestamp', '')}")
+                st.write(f"**Username:** {selected_record.get('username', '')}")
+                st.write(f"**Patient ID:** {selected_record.get('patient_id', '')}")
+                st.write(f"**Location:** {selected_record.get('location', '')}")
+                st.write(f"**Language:** {selected_record.get('language', '')}")
+                st.write(f"**Prediction Score:** {selected_record.get('prediction', '')}")
+                st.write(f"**Classification:** {selected_record.get('classification', '')}")
+                st.write(f"**Symptoms:** {', '.join(selected_record.get('selected_symptoms', [])) if selected_record.get('selected_symptoms') else 'None'}")
+                st.write(f"**Other Symptoms:** {selected_record.get('other_symptoms', '') or 'None'}")
+                st.write(f"**Lab Result:** {selected_record.get('lab_result', '') or 'Not entered'}")
+                st.write(f"**Lab Test Type:** {selected_record.get('lab_test_type', '') or 'Not entered'}")
+                st.write(f"**Confirmed By:** {selected_record.get('confirmed_by', '') or 'Not entered'}")
+                st.write(f"**Confirmation Timestamp:** {selected_record.get('confirmation_timestamp', '') or 'Not entered'}")
