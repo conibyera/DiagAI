@@ -112,8 +112,8 @@ symptoms_sw = [
 # ---------------- TRANSLATIONS ----------------
 translations = {
     "title": {
-        "en": "DiagAI/1.0 for Rapid Malaria Diagnosis",
-        "sw": "DiagAI/1.0 kwa Uchunguzi wa Haraka wa Malaria"
+        "en": "DiagAI/1.0 Triage Tool for Malaria Diagnosis",
+        "sw": "DiagAI/1.0 Chombo cha Upangaji wa Uchunguzi wa Malaria"
     },
 
     "sidebar_header": {
@@ -123,9 +123,9 @@ translations = {
 
     "sidebar_content": {
         "en": """
-DiagAI is a web application designed for rapid disease diagnosis based on symptoms, signs, and patient history input.
+DiagAI is a web application designed for rapid disease diagnosis and triage based on symptoms, signs, and patient history input.
 
-This first version of the application utilizes a neural network model that predicts the likelihood of malaria based on the selected symptoms, signs, or patient history.
+This first version of the application utilizes a neural network model that predicts the likelihood of malaria for the purpose of triage based on the selected symptoms, signs, or patient history.
 
 **How to Use:**
 1. Enter Patient ID and select location.
@@ -133,13 +133,13 @@ This first version of the application utilizes a neural network model that predi
 3. Click the button to check the malaria result.
 4. Optionally save the response to the database.
 
-*Please remember that this application is a rapid diagnostic tool and not a substitute for professional medical advice.*
+*Please remember that this application is a rapid diagnostic tool for triage and not a substitute for professional medical advice.*
         """,
 
         "sw": """
-DiagAI ni programu ya mtandao iliyoundwa kwa uchunguzi wa haraka wa magonjwa kulingana na dalili, ishara, na historia ya mgonjwa.
+DiagAI ni programu ya mtandao iliyoundwa kwa uchunguzi wa haraka wa magonjwa na upangaji wa uchunguzi zaidi kulingana na dalili, ishara, na historia ya mgonjwa.
 
-Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa kuzingatia historia, dalili na ishara zilizoainishwa na mgonjwa au mtabibu wake.
+Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria na upangaji wa uchunguzi zaidi kwa kuzingatia historia, dalili na ishara zilizoainishwa na mgonjwa au mtabibu wake.
 
 **Maelekezo:**
 1. Weka namba ya mgonjwa na uchague mahali.
@@ -147,7 +147,7 @@ Toleo hili la kwanza linatumia mtandao wa neva kutabiri uwezekano wa malaria kwa
 3. Bonyeza kitufe ili kuangalia matokeo ya malaria.
 4. Unaweza kuhifadhi taarifa kwenye kanzidata.
 
-*Tafadhali kumbuka kuwa hii programu imeandaliwa kwa ajili ya uchunguzi wa haraka wa malaria na si mbadala wa ushauri wa kitaalamu wa matibabu.*
+*Tafadhali kumbuka kuwa hii programu imeandaliwa kwa ajili ya uchunguzi wa haraka wa malaria kwa ajili ya uchunguzi zaidi na si mbadala wa ushauri wa kitaalamu wa matibabu.*
         """
     },
 
