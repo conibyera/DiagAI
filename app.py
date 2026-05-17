@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from datetime import datetime, date
 
 API_BASE_URL = "http://127.0.0.1:8000"
 
@@ -373,6 +374,7 @@ def submit_to_database(
     patient_id,
     facility_name,
     date_of_birth,
+    age_years,
     sex,
     location,
     language,
@@ -389,6 +391,7 @@ def submit_to_database(
         "patient_id": patient_id,
         "facility_name": facility_name,
         "date_of_birth": str(date_of_birth),
+        "age_years": age_years,
         "sex": sex,
         "location": location,
         "language": language,
@@ -820,6 +823,9 @@ if tab_en is not None:
 
         date_of_birth_en = st.date_input(
             translations["date_of_birth_label"]["en"],
+            value=date(2000, 1, 1), # optional default
+            min_value=date(1930, 1, 1), # earliest allowed
+            max_value=date.today(), # no future dates
             help=translations["date_of_birth_help"]["en"],
             key="date_of_birth_en"
         )
@@ -876,6 +882,16 @@ if tab_en is not None:
                 st.session_state.patient_id_saved_en = patient_id_en.strip()
                 st.session_state.facility_name_saved_en = facility_name_en.strip()
                 st.session_state.date_of_birth_saved_en = str(date_of_birth_en)
+                today = datetime.today().date()
+                age_years_en = (
+                    today.year
+                    - date_of_birth_en.year
+                    - (
+                        (today.month, today.day)
+                        < (date_of_birth_en.month, date_of_birth_en.day)
+                    )
+                )
+                st.session_state.age_years_saved_en = age_years_en
                 st.session_state.sex_saved_en = sex_en
                 st.session_state.location_saved_en = location_en
 
@@ -898,6 +914,7 @@ if tab_en is not None:
                         patient_id=st.session_state.patient_id_saved_en,
                         facility_name=st.session_state.facility_name_saved_en,
                         date_of_birth=st.session_state.date_of_birth_saved_en,
+                        age_years=st.session_state.age_years_saved_en,
                         sex=st.session_state.sex_saved_en,
                         location=st.session_state.location_saved_en,
                         language="English",
@@ -932,6 +949,9 @@ if tab_sw is not None:
 
         date_of_birth_sw = st.date_input(
             translations["date_of_birth_label"]["sw"],
+            value=date(2000, 1, 1),
+            min_value=date(1930, 1, 1),
+            max_value=date.today(),
             help=translations["date_of_birth_help"]["sw"],
             key="date_of_birth_sw"
         )
@@ -994,6 +1014,17 @@ if tab_sw is not None:
                 st.session_state.patient_id_saved_sw = patient_id_sw.strip()
                 st.session_state.facility_name_saved_sw = facility_name_sw.strip()
                 st.session_state.date_of_birth_saved_sw = str(date_of_birth_sw)
+                today = datetime.today().date()
+                age_years_sw = (
+                    today.year
+                    - date_of_birth_sw.year
+                    - (
+                        (today.month, today.day)
+                        < (date_of_birth_sw.month, date_of_birth_sw.day)
+                    )
+                )
+
+                st.session_state.age_years_saved_sw = age_years_sw
                 st.session_state.sex_saved_sw = sex_map_sw_to_en[sex_sw]
                 st.session_state.location_saved_sw = location_map_sw_to_en[location_sw]
 
@@ -1016,6 +1047,7 @@ if tab_sw is not None:
                         patient_id=st.session_state.patient_id_saved_sw,
                         facility_name=st.session_state.facility_name_saved_sw,
                         date_of_birth=st.session_state.date_of_birth_saved_sw,
+                        age_years=st.session_state.age_years_saved_sw,
                         sex=st.session_state.sex_saved_sw,
                         location=st.session_state.location_saved_sw,
                         language="Kiswahili",
@@ -1282,6 +1314,7 @@ if st.session_state.role == "admin":
             "patient_id",
             "facility_name",
             "date_of_birth",
+            "age_years",
             "sex",
             "location",
             "language",
@@ -1324,6 +1357,7 @@ if st.session_state.role == "admin":
             "patient_id": "Patient ID",
             "facility_name": "Facility",
             "date_of_birth": "Date of Birth",
+            "age_years": "Age (Years)",
             "sex": "Sex",
             "location": "Location",
             "language": "Language",
