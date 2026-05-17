@@ -1255,16 +1255,24 @@ if st.session_state.role == "admin":
         with date_col1:
             start_date = st.date_input(
                 "Start Date",
-                value=min_date if min_date else None,
+                value=min_date if min_date else date(1930, 1, 1),
+                min_value=date(1930, 1, 1),
+                max_value=date.today(),
                 key="admin_start_date_v9"
             )
 
         with date_col2:
             end_date = st.date_input(
                 "End Date",
-                value=max_date if max_date else None,
+                value=max_date if max_date else date.today(),
+                min_value=date(1930, 1, 1),
+                max_value=date.today(),
                 key="admin_end_date_v9"
             )
+        
+        if start_date > end_date:
+            st.warning("Start Date can't be after End Date – swapping them for you.")
+            start_date, end_date = end_date, start_date
 
         # ---------- Apply Filters ----------
         filtered_df = df.copy()
